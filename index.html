@@ -153,7 +153,7 @@ function startListening() {
     // Hard timeout — ALWAYS fires after 10 sec
     timeoutRef = setTimeout(() => {
         safeStop();
-    }, 10000);
+    }, 7000);
 
     recognition.onresult = e => {
         lastHeard = e.results[0][0].transcript;
