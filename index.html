@@ -6,7 +6,8 @@
 <title>Verbix</title>
 
 <style>
-/* MAGIC STYLE ----------------------------------------------------- */
+
+/* GLOBAL MAGIC THEME */
 
 body {
     margin: 0;
@@ -19,6 +20,7 @@ body {
     overflow: hidden;
 }
 
+/* TITLE (only visible before start) */
 #title {
     margin-top: 40px;
     font-size: 42px;
@@ -27,6 +29,7 @@ body {
     text-shadow: 0 0 12px #ffbf66, 0 0 22px #ffae33;
 }
 
+/* SUBTEXT */
 #subtitle {
     font-size: 18px;
     margin-top: 4px;
@@ -34,6 +37,7 @@ body {
     opacity: 0.8;
 }
 
+/* START BUTTON — magical glow */
 #startBtn {
     margin-top: 70px;
     padding: 16px 45px;
@@ -54,6 +58,11 @@ body {
     transform: scale(1.05);
 }
 
+#startBtn:active {
+    transform: scale(0.96);
+}
+
+/* STATUS (not visible after start) */
 #status {
     margin-top: 30px;
     font-size: 18px;
@@ -61,6 +70,24 @@ body {
     opacity: 0.8;
 }
 
+/* MAGIC SPARKLES (ambient decoration) */
+.sparkle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #ffdd99;
+    border-radius: 50%;
+    opacity: 0.8;
+    animation: float 6s infinite ease-in-out;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px) scale(1); opacity: 0.8; }
+    50% { transform: translateY(-40px) scale(1.4); opacity: 1; }
+    100% { transform: translateY(0px) scale(1); opacity: 0.8; }
+}
+
+/* BLACKOUT MODE AFTER START */
 #blackout {
     position: fixed;
     top: 0;
@@ -71,43 +98,37 @@ body {
     z-index: 999999999;
     display: none;
 }
-</style>
-</head>
 
+</style>
+
+</head>
 <body>
 
 <h1 id="title">VERBIX</h1>
 <p id="subtitle">Whisper a word. Let the magic reveal it.</p>
+
 <button id="startBtn">Begin</button>
 <p id="status">Waiting…</p>
 
 <div id="blackout"></div>
 
 <script>
-// -----------------------------------------------------------
-// EARLY PERMISSION REQUESTS (as early as allowed by browsers)
-// -----------------------------------------------------------
-
-// Request microphone permission as soon as possible
-navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => {
-    // User will be asked later automatically by STT
-});
-
-// Request motion permission ASAP (iOS requires a user gesture)
-document.addEventListener("click", function requestMotion() {
-    if (typeof DeviceMotionEvent !== "undefined" &&
-        typeof DeviceMotionEvent.requestPermission === "function") {
-
-        DeviceMotionEvent.requestPermission();
-    }
-    document.removeEventListener("click", requestMotion);
-});
+// ------------------------------
+// Generate floating sparkles
+// ------------------------------
+for (let i = 0; i < 18; i++) {
+    const s = document.createElement("div");
+    s.className = "sparkle";
+    s.style.left = Math.random() * 100 + "vw";
+    s.style.top = Math.random() * 100 + "vh";
+    s.style.animationDuration = (4 + Math.random() * 4) + "s";
+    document.body.appendChild(s);
+}
 
 
-// -----------------------------------------------------------
-// MAGIC LOGIC
-// -----------------------------------------------------------
-
+// ------------------------------
+// Find first repeated Hebrew word
+// ------------------------------
 function findDoubleWord(text) {
     const words = text.trim().split(/\s+/);
     for (let i = 0; i < words.length - 1; i++) {
@@ -119,21 +140,21 @@ function findDoubleWord(text) {
 }
 
 
-// -----------------------------------------------------------
-// SPEECH RECOGNITION SETUP
-// -----------------------------------------------------------
+// ------------------------------
+// Speech Recognition
+// ------------------------------
 const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
 let recognition = null;
-let timeoutRef = null;
-let lastHeard = "";
+let sttTimeout = null;
+let lastPartialText = "";
 
 function setupRecognition() {
     if (!SpeechRecognition) return;
 
     recognition = new SpeechRecognition();
-    recognition.lang = "he-IL";   // Hebrew
+    recognition.lang = "he-IL";
     recognition.interimResults = true;
     recognition.continuous = false;
 }
@@ -141,37 +162,41 @@ function setupRecognition() {
 setupRecognition();
 
 
-// -----------------------------------------------------------
-// START LISTENING (with reliable 10-sec timeout)
-// -----------------------------------------------------------
+// ------------------------------
+// Start Listening after shake
+// ------------------------------
 function startListening() {
     if (!recognition) return;
 
-    lastHeard = "";
+    lastPartialText = "";
     recognition.start();
 
-    // Hard timeout — ALWAYS fires after 10 sec
-    timeoutRef = setTimeout(() => {
-        safeStop();
-    }, 7000);
+    sttTimeout = setTimeout(() => {
+        recognition.stop();
+        processSpeech(lastPartialText);
+    }, 10000);
 
-    recognition.onresult = e => {
-        lastHeard = e.results[0][0].transcript;
+    recognition.onresult = e => lastPartialText = e.results[0][0].transcript;
+
+    recognition.onerror = () => {
+        clearTimeout(sttTimeout);
+        processSpeech(lastPartialText);
     };
 
-    recognition.onend = () => safeStop();
-    recognition.onerror = () => safeStop();
+    recognition.onend = () => {
+        clearTimeout(sttTimeout);
+        processSpeech(lastPartialText);
+    };
 }
 
-function safeStop() {
-    clearTimeout(timeoutRef);
 
-    // Stop STT if still running
-    try { recognition.stop(); } catch (e) {}
+// ------------------------------
+// Process speech
+// ------------------------------
+function processSpeech(text) {
+    if (!text.trim()) return;
 
-    if (lastHeard.trim() === "") return;
-
-    const repeated = findDoubleWord(lastHeard);
+    const repeated = findDoubleWord(text);
     if (repeated !== "") {
         window.location.href =
             "https://www.google.com/search?q=" + encodeURIComponent(repeated);
@@ -179,29 +204,29 @@ function safeStop() {
 }
 
 
-// -----------------------------------------------------------
-// FULLSCREEN + BLACKOUT MODE
-// -----------------------------------------------------------
+// ------------------------------
+// Fullscreen + blackout
+// ------------------------------
 async function activateFullscreen() {
     try {
         await document.documentElement.requestFullscreen();
-    } catch (e) {}
+    } catch (e) { }
 }
 
 
-// -----------------------------------------------------------
-// START BUTTON → FULLSCREEN + BLACKOUT + ENABLE SHAKE
-// -----------------------------------------------------------
+// ------------------------------
+// Start button → fullscreen + blackout + enable shake
+// ------------------------------
 let shakeEnabled = false;
 
 document.getElementById("startBtn").addEventListener("click", () => {
+
     shakeEnabled = true;
 
     activateFullscreen().then(() => {
         document.getElementById("blackout").style.display = "block";
     });
 
-    // Hide UI elements
     document.getElementById("title").style.display = "none";
     document.getElementById("subtitle").style.display = "none";
     document.getElementById("startBtn").style.display = "none";
@@ -209,9 +234,9 @@ document.getElementById("startBtn").addEventListener("click", () => {
 });
 
 
-// -----------------------------------------------------------
-// SHAKE DETECTION
-// -----------------------------------------------------------
+// ------------------------------
+// Shake detection
+// ------------------------------
 let lastShake = Date.now();
 
 function handleMotion(event) {
@@ -232,7 +257,22 @@ function handleMotion(event) {
     }
 }
 
-window.addEventListener("devicemotion", handleMotion);
+// iOS permission
+if (typeof DeviceMotionEvent !== "undefined" &&
+    typeof DeviceMotionEvent.requestPermission === "function") {
+
+    document.body.addEventListener("click", () => {
+        DeviceMotionEvent.requestPermission().then(s => {
+            if (s === "granted") {
+                window.addEventListener("devicemotion", handleMotion);
+            }
+        });
+    });
+
+} else {
+    window.addEventListener("devicemotion", handleMotion);
+}
+
 </script>
 
 </body>
