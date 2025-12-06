@@ -6,55 +6,126 @@
 <title>Verbix</title>
 
 <style>
-    body {
-        margin: 0;
-        padding: 0;
-        background: #111;
-        color: white;
-        font-family: Arial, sans-serif;
-        text-align: center;
-        overflow: hidden;
-    }
 
-    #startBtn {
-        padding: 15px 30px;
-        font-size: 20px;
-        background: #4ad;
-        color: #000;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        margin-top: 40px;
-    }
+/* GLOBAL MAGIC THEME */
 
-    #status {
-        margin-top: 20px;
-        font-size: 20px;
-        color: #ccc;
-    }
+body {
+    margin: 0;
+    padding: 0;
+    background: radial-gradient(circle at center,
+        #3b1d0a 0%, #1e0f06 70%, #0f0804 100%);
+    color: #ffdca8;
+    font-family: "Georgia", serif;
+    text-align: center;
+    overflow: hidden;
+}
 
-    /* Fullscreen blackout layer */
-    #blackout {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: black;
-        z-index: 999999999;
-        display: none;
-    }
+/* TITLE (only visible before start) */
+#title {
+    margin-top: 40px;
+    font-size: 42px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    text-shadow: 0 0 12px #ffbf66, 0 0 22px #ffae33;
+}
+
+/* SUBTEXT */
+#subtitle {
+    font-size: 18px;
+    margin-top: 4px;
+    color: #ffedc9;
+    opacity: 0.8;
+}
+
+/* START BUTTON — magical glow */
+#startBtn {
+    margin-top: 70px;
+    padding: 16px 45px;
+    font-size: 24px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffda8b, #d69a3c);
+    color: #4a2a0f;
+    font-weight: bold;
+    font-family: "Georgia", serif;
+    cursor: pointer;
+    box-shadow: 0 0 20px #ffcf70;
+    transition: 0.3s;
+}
+
+#startBtn:hover {
+    box-shadow: 0 0 35px #ffd07a;
+    transform: scale(1.05);
+}
+
+#startBtn:active {
+    transform: scale(0.96);
+}
+
+/* STATUS (not visible after start) */
+#status {
+    margin-top: 30px;
+    font-size: 18px;
+    color: #ffe3b7;
+    opacity: 0.8;
+}
+
+/* MAGIC SPARKLES (ambient decoration) */
+.sparkle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #ffdd99;
+    border-radius: 50%;
+    opacity: 0.8;
+    animation: float 6s infinite ease-in-out;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px) scale(1); opacity: 0.8; }
+    50% { transform: translateY(-40px) scale(1.4); opacity: 1; }
+    100% { transform: translateY(0px) scale(1); opacity: 0.8; }
+}
+
+/* BLACKOUT MODE AFTER START */
+#blackout {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: black;
+    z-index: 999999999;
+    display: none;
+}
+
 </style>
 
 </head>
 <body>
 
-    <button id="startBtn">Start</button>
-    <p id="status">Waiting…</p>
+<h1 id="title">VERBIX</h1>
+<p id="subtitle">Whisper a word. Let the magic reveal it.</p>
 
-    <div id="blackout"></div>
+<button id="startBtn">Begin</button>
+<p id="status">Waiting…</p>
+
+<div id="blackout"></div>
 
 <script>
+// ------------------------------
+// Generate floating sparkles
+// ------------------------------
+for (let i = 0; i < 18; i++) {
+    const s = document.createElement("div");
+    s.className = "sparkle";
+    s.style.left = Math.random() * 100 + "vw";
+    s.style.top = Math.random() * 100 + "vh";
+    s.style.animationDuration = (4 + Math.random() * 4) + "s";
+    document.body.appendChild(s);
+}
+
+
 // ------------------------------
 // Find first repeated Hebrew word
 // ------------------------------
@@ -70,7 +141,7 @@ function findDoubleWord(text) {
 
 
 // ------------------------------
-// Speech Recognition Setup
+// Speech Recognition
 // ------------------------------
 const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -80,14 +151,10 @@ let sttTimeout = null;
 let lastPartialText = "";
 
 function setupRecognition() {
-    if (!SpeechRecognition) {
-        document.getElementById("status").innerText =
-            "Speech Recognition not supported.";
-        return;
-    }
+    if (!SpeechRecognition) return;
 
     recognition = new SpeechRecognition();
-    recognition.lang = "he-IL";  // Hebrew input
+    recognition.lang = "he-IL";
     recognition.interimResults = true;
     recognition.continuous = false;
 }
@@ -96,32 +163,27 @@ setupRecognition();
 
 
 // ------------------------------
-// Start Listening (after shake)
+// Start Listening after shake
 // ------------------------------
 function startListening() {
     if (!recognition) return;
 
-    document.getElementById("status").innerText = "Listening…";
-
     lastPartialText = "";
     recognition.start();
 
-    // Timeout after 10 seconds
     sttTimeout = setTimeout(() => {
         recognition.stop();
         processSpeech(lastPartialText);
     }, 10000);
 
-    recognition.onresult = function (event) {
-        lastPartialText = event.results[0][0].transcript;
-    };
+    recognition.onresult = e => lastPartialText = e.results[0][0].transcript;
 
-    recognition.onerror = function () {
+    recognition.onerror = () => {
         clearTimeout(sttTimeout);
         processSpeech(lastPartialText);
     };
 
-    recognition.onend = function () {
+    recognition.onend = () => {
         clearTimeout(sttTimeout);
         processSpeech(lastPartialText);
     };
@@ -129,13 +191,12 @@ function startListening() {
 
 
 // ------------------------------
-// Process speech result
+// Process speech
 // ------------------------------
 function processSpeech(text) {
-    if (!text || text.trim() === "") return;
+    if (!text.trim()) return;
 
     const repeated = findDoubleWord(text);
-
     if (repeated !== "") {
         window.location.href =
             "https://www.google.com/search?q=" + encodeURIComponent(repeated);
@@ -144,14 +205,12 @@ function processSpeech(text) {
 
 
 // ------------------------------
-// FULLSCREEN + BLACKOUT
+// Fullscreen + blackout
 // ------------------------------
 async function activateFullscreen() {
     try {
         await document.documentElement.requestFullscreen();
-    } catch (e) {
-        console.warn("Fullscreen failed:", e);
-    }
+    } catch (e) { }
 }
 
 
@@ -161,19 +220,22 @@ async function activateFullscreen() {
 let shakeEnabled = false;
 
 document.getElementById("startBtn").addEventListener("click", () => {
+
     shakeEnabled = true;
 
     activateFullscreen().then(() => {
         document.getElementById("blackout").style.display = "block";
     });
 
+    document.getElementById("title").style.display = "none";
+    document.getElementById("subtitle").style.display = "none";
     document.getElementById("startBtn").style.display = "none";
     document.getElementById("status").style.display = "none";
 });
 
 
 // ------------------------------
-// Shake Detection
+// Shake detection
 // ------------------------------
 let lastShake = Date.now();
 
@@ -195,13 +257,13 @@ function handleMotion(event) {
     }
 }
 
-// iOS motion permission fix
+// iOS permission
 if (typeof DeviceMotionEvent !== "undefined" &&
     typeof DeviceMotionEvent.requestPermission === "function") {
 
     document.body.addEventListener("click", () => {
-        DeviceMotionEvent.requestPermission().then((ans) => {
-            if (ans === "granted") {
+        DeviceMotionEvent.requestPermission().then(s => {
+            if (s === "granted") {
                 window.addEventListener("devicemotion", handleMotion);
             }
         });
