@@ -1,16 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Shake Hebrew STT</title>
-    <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shake Hebrew STT</title>
+
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: #111;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        overflow: hidden;
+    }
+
+    #startBtn {
+        padding: 15px 30px;
+        font-size: 20px;
+        background: #4ad;
+        color: #000;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-top: 40px;
+    }
+
+    #status {
+        margin-top: 20px;
+        font-size: 20px;
+        color: #ccc;
+    }
+
+    /* Fullscreen blackout layer */
+    #blackout {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: black;
+        z-index: 999999999;
+        display: none;
+    }
+</style>
+
 </head>
 <body>
 
     <button id="startBtn">Start</button>
     <p id="status">Waiting…</p>
 
-    <script src="script.js"></script>
+    <div id="blackout"></div>
+
+<script>
+// ------------------------------
+// Find first repeated Hebrew word
+// ------------------------------
+function findDoubleWord(text) {
+    const words = text.trim().split(/\s+/);
+    for (let i = 0; i < words.length - 1; i++) {
+        if (words[i] === words[i + 1]) {
+            return words[i];
+        }
+    }
+    return "";
+}
+
+
+// ------------------------------
+// Speech Recognition Setup
+// ------------------------------
+const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+let recognition = null;
+let sttTimeout = null;
+let lastPartialText = "";
+
+function setupRecognition() {
+    if (!SpeechRecognition) {
+        document.getElementById("status").innerText =
+            "Speech Recognition not supported.";
+        return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.lang = "he-IL";  // Hebrew input
+    recognition.interimResults = true;
+    recognition.continuous = false;
+}
+
+setupRecognition();
+
+
+// ------------------------------
+// Start Listening (after shake)
+// ------------------------------
+function startListening() {
+    if (!recognition) return;
+
+    document.getElementById("status").innerText = "Listening…";
+
+    lastPartialText = "";
+    recognition.start();
+
+    // Timeout after 10 seconds
+    sttTimeout = setTimeout(() => {
+        recognition.stop();
+        processSpeech(lastPartialText);
+    }, 10000);
+
+    recognition.onresult = function (event) {
+        lastPartialText = event.results[0][0].transcript;
+    };
+
+    recognition.onerror = function () {
+        clearTimeout(sttTimeout);
+        processSpeech(lastPartialText);
+    };
+
+    recognition.onend = function () {
+        clearTimeout(sttTimeout);
+        processSpeech(lastPartialText);
+    };
+}
+
+
+// ------------------------------
+// Process speech result
+// ------------------------------
+function processSpeech(text) {
+    if (!text || text.trim() === "") return;
+
+    const repeated = findDoubleWord(text);
+
+    if (repeated !== "") {
+        window.location.href =
+            "https://www.google.com/search?q=" + encodeURIComponent(repeated);
+    }
+}
+
+
+// ------------------------------
+// FULLSCREEN + BLACKOUT
+// ------------------------------
+async function activateFullscreen() {
+    try {
+        await document.documentElement.requestFullscreen();
+    } catch (e) {
+        console.warn("Fullscreen failed:", e);
+    }
+}
+
+
+// ------------------------------
+// Start button → fullscreen + blackout + enable shake
+// ------------------------------
+let shakeEnabled = false;
+
+document.getElementById("startBtn").addEventListener("click", () => {
+    shakeEnabled = true;
+
+    activateFullscreen().then(() => {
+        document.getElementById("blackout").style.display = "block";
+    });
+
+    document.getElementById("startBtn").style.display = "none";
+    document.getElementById("status").style.display = "none";
+});
+
+
+// ------------------------------
+// Shake Detection
+// ------------------------------
+let lastShake = Date.now();
+
+function handleMotion(event) {
+    if (!shakeEnabled) return;
+
+    const acc = event.accelerationIncludingGravity;
+    if (!acc) return;
+
+    const strength =
+        Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
+
+    if (strength > 25) {
+        const now = Date.now();
+        if (now - lastShake > 1500) {
+            lastShake = now;
+            startListening();
+        }
+    }
+}
+
+// iOS motion permission fix
+if (typeof DeviceMotionEvent !== "undefined" &&
+    typeof DeviceMotionEvent.requestPermission === "function") {
+
+    document.body.addEventListener("click", () => {
+        DeviceMotionEvent.requestPermission().then((ans) => {
+            if (ans === "granted") {
+                window.addEventListener("devicemotion", handleMotion);
+            }
+        });
+    });
+
+} else {
+    window.addEventListener("devicemotion", handleMotion);
+}
+
+</script>
+
 </body>
 </html>
