@@ -105,10 +105,7 @@ body {
 <body>
 
 <h1 id="title">VERBIX</h1>
-<p id="subtitle">Whisper a word. Let the magic reveal it.</p>
-
 <button id="startBtn">Begin</button>
-<p id="status">Waiting…</p>
 
 <div id="blackout"></div>
 
@@ -174,7 +171,7 @@ function startListening() {
     sttTimeout = setTimeout(() => {
         recognition.stop();
         processSpeech(lastPartialText);
-    }, 10000);
+    }, 5000);
 
     recognition.onresult = e => lastPartialText = e.results[0][0].transcript;
 
