@@ -1,26 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Verbix</title>
 
 <style>
-
-/* GLOBAL MAGIC THEME */
-
 body {
     margin: 0;
     padding: 0;
-    background: radial-gradient(circle at center,
-        #3b1d0a 0%, #1e0f06 70%, #0f0804 100%);
+    background: radial-gradient(circle, #3b1d0a, #1e0f06 70%, #0f0804);
     color: #ffdca8;
-    font-family: "Georgia", serif;
+    font-family: Georgia, serif;
     text-align: center;
     overflow: hidden;
 }
 
-/* TITLE (only visible before start) */
 #title {
     margin-top: 40px;
     font-size: 42px;
@@ -29,15 +24,6 @@ body {
     text-shadow: 0 0 12px #ffbf66, 0 0 22px #ffae33;
 }
 
-/* SUBTEXT */
-#subtitle {
-    font-size: 18px;
-    margin-top: 4px;
-    color: #ffedc9;
-    opacity: 0.8;
-}
-
-/* START BUTTON — magical glow */
 #startBtn {
     margin-top: 70px;
     padding: 16px 45px;
@@ -47,30 +33,14 @@ body {
     background: linear-gradient(180deg, #ffda8b, #d69a3c);
     color: #4a2a0f;
     font-weight: bold;
-    font-family: "Georgia", serif;
     cursor: pointer;
     box-shadow: 0 0 20px #ffcf70;
     transition: 0.3s;
 }
 
-#startBtn:hover {
-    box-shadow: 0 0 35px #ffd07a;
-    transform: scale(1.05);
-}
+#startBtn:hover { transform: scale(1.05); box-shadow: 0 0 35px #ffd07a; }
+#startBtn:active { transform: scale(0.96); }
 
-#startBtn:active {
-    transform: scale(0.96);
-}
-
-/* STATUS (not visible after start) */
-#status {
-    margin-top: 30px;
-    font-size: 18px;
-    color: #ffe3b7;
-    opacity: 0.8;
-}
-
-/* MAGIC SPARKLES (ambient decoration) */
 .sparkle {
     position: absolute;
     width: 4px;
@@ -82,37 +52,33 @@ body {
 }
 
 @keyframes float {
-    0% { transform: translateY(0px) scale(1); opacity: 0.8; }
-    50% { transform: translateY(-40px) scale(1.4); opacity: 1; }
-    100% { transform: translateY(0px) scale(1); opacity: 0.8; }
+    0%,100% { transform: translateY(0) scale(1); opacity: .8; }
+    50%     { transform: translateY(-40px) scale(1.4); opacity: 1; }
 }
 
-/* BLACKOUT MODE AFTER START */
 #blackout {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
     background: black;
-    z-index: 999999999;
+    z-index: 9999;
     display: none;
 }
-
 </style>
-
 </head>
+
 <body>
 
 <h1 id="title">VERBIX</h1>
 <button id="startBtn">Begin</button>
-
 <div id="blackout"></div>
 
 <script>
-// ------------------------------
-// Generate floating sparkles
-// ------------------------------
+// ----------------------
+// Small helpers
+// ----------------------
+const $ = id => document.getElementById(id);
+
+// Floating sparkles
 for (let i = 0; i < 18; i++) {
     const s = document.createElement("div");
     s.className = "sparkle";
@@ -122,155 +88,98 @@ for (let i = 0; i < 18; i++) {
     document.body.appendChild(s);
 }
 
-
-// ------------------------------
-// Find first repeated Hebrew word
-// ------------------------------
-function findDoubleWord(text) {
-    const words = text.trim().split(/\s+/);
-    for (let i = 0; i < words.length - 1; i++) {
-        if (words[i] === words[i + 1]) {
-            return words[i];
-        }
-    }
+// Find repeated consecutive word
+const findDoubleWord = txt => {
+    const w = txt.trim().split(/\s+/);
+    for (let i = 0; i < w.length - 1; i++)
+        if (w[i] === w[i+1]) return w[i];
     return "";
-}
+};
 
-
-// ------------------------------
+// ----------------------
 // Speech Recognition
-// ------------------------------
-const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
+// ----------------------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition, lastPartial = "", sttTO;
 
-let recognition = null;
-let sttTimeout = null;
-let lastPartialText = "";
-
-function setupRecognition() {
-    if (!SpeechRecognition) return;
-
-    recognition = new SpeechRecognition();
+if (SR) {
+    recognition = new SR();
     recognition.lang = "he-IL";
     recognition.interimResults = true;
-    recognition.continuous = false;
+
+    recognition.onresult = e =>
+        lastPartial = e.results[0][0].transcript;
+
+    const stopAndProcess = () => {
+        clearTimeout(sttTO);
+        processSpeech(lastPartial);
+    };
+
+    recognition.onerror = stopAndProcess;
+    recognition.onend = stopAndProcess;
 }
 
-setupRecognition();
-
-
-// ------------------------------
-// Start Listening after shake
-// ------------------------------
 function startListening() {
     if (!recognition) return;
-
-    lastPartialText = "";
+    lastPartial = "";
     recognition.start();
 
-    sttTimeout = setTimeout(() => {
-        recognition.stop();
-        processSpeech(lastPartialText);
-    }, 5000);
-
-    recognition.onresult = e => lastPartialText = e.results[0][0].transcript;
-
-    recognition.onerror = () => {
-        clearTimeout(sttTimeout);
-        processSpeech(lastPartialText);
-    };
-
-    recognition.onend = () => {
-        clearTimeout(sttTimeout);
-        processSpeech(lastPartialText);
-    };
+    sttTO = setTimeout(() => recognition.stop(), 5000);
 }
 
-
-// ------------------------------
-// Process speech
-// ------------------------------
 function processSpeech(text) {
     if (!text.trim()) return;
-
-    const repeated = findDoubleWord(text);
-    if (repeated !== "") {
-        window.location.href =
-            "https://www.google.com/search?q=" + encodeURIComponent(repeated);
-    }
+    const rep = findDoubleWord(text);
+    if (rep) location.href = "https://www.google.com/search?q=" + encodeURIComponent(rep);
 }
 
-
-// ------------------------------
+// ----------------------
 // Fullscreen + blackout
-// ------------------------------
-async function activateFullscreen() {
-    try {
-        await document.documentElement.requestFullscreen();
-    } catch (e) { }
+// ----------------------
+async function goFullscreen() {
+    try { await document.documentElement.requestFullscreen(); } catch {}
 }
 
-
-// ------------------------------
-// Start button → fullscreen + blackout + enable shake
-// ------------------------------
+// ----------------------
+// Start button
+// ----------------------
 let shakeEnabled = false;
 
-document.getElementById("startBtn").addEventListener("click", () => {
-
+$("startBtn").onclick = () => {
     shakeEnabled = true;
+    goFullscreen().then(() => $("blackout").style.display = "block");
 
-    activateFullscreen().then(() => {
-        document.getElementById("blackout").style.display = "block";
-    });
+    $("title").style.display = "none";
+    $("startBtn").style.display = "none";
+};
 
-    document.getElementById("title").style.display = "none";
-    document.getElementById("subtitle").style.display = "none";
-    document.getElementById("startBtn").style.display = "none";
-    document.getElementById("status").style.display = "none";
-});
-
-
-// ------------------------------
+// ----------------------
 // Shake detection
-// ------------------------------
-let lastShake = Date.now();
+// ----------------------
+let lastShake = 0;
 
-function handleMotion(event) {
+function onMotion(ev) {
     if (!shakeEnabled) return;
+    const a = ev.accelerationIncludingGravity;
+    if (!a) return;
 
-    const acc = event.accelerationIncludingGravity;
-    if (!acc) return;
-
-    const strength =
-        Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
-
-    if (strength > 25) {
-        const now = Date.now();
-        if (now - lastShake > 1500) {
-            lastShake = now;
-            startListening();
-        }
+    const strength = Math.abs(a.x) + Math.abs(a.y) + Math.abs(a.z);
+    if (strength > 25 && Date.now() - lastShake > 1500) {
+        lastShake = Date.now();
+        startListening();
     }
 }
 
 // iOS permission
-if (typeof DeviceMotionEvent !== "undefined" &&
-    typeof DeviceMotionEvent.requestPermission === "function") {
-
-    document.body.addEventListener("click", () => {
-        DeviceMotionEvent.requestPermission().then(s => {
-            if (s === "granted") {
-                window.addEventListener("devicemotion", handleMotion);
-            }
+if (typeof DeviceMotionEvent?.requestPermission === "function") {
+    document.body.onclick = () => {
+        DeviceMotionEvent.requestPermission().then(res => {
+            if (res === "granted") window.addEventListener("devicemotion", onMotion);
         });
-    });
-
+    };
 } else {
-    window.addEventListener("devicemotion", handleMotion);
+    window.addEventListener("devicemotion", onMotion);
 }
-
 </script>
-
 </body>
 </html>
