@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +9,7 @@
 body {
     margin: 0;
     padding: 0;
-    background: radial-gradient(circle, #3b1d0a, #1e0f06 70%, #0f0804);
+    background: radial-gradient(circle, #2b1407, #120804 70%);
     color: #ffdca8;
     font-family: Georgia, serif;
     text-align: center;
@@ -19,9 +19,8 @@ body {
 #title {
     margin-top: 40px;
     font-size: 42px;
-    font-weight: bold;
     letter-spacing: 3px;
-    text-shadow: 0 0 12px #ffbf66, 0 0 22px #ffae33;
+    text-shadow: 0 0 12px #ffbf66;
 }
 
 #startBtn {
@@ -35,25 +34,6 @@ body {
     font-weight: bold;
     cursor: pointer;
     box-shadow: 0 0 20px #ffcf70;
-    transition: 0.3s;
-}
-
-#startBtn:hover { transform: scale(1.05); box-shadow: 0 0 35px #ffd07a; }
-#startBtn:active { transform: scale(0.96); }
-
-.sparkle {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    background: #ffdd99;
-    border-radius: 50%;
-    opacity: 0.8;
-    animation: float 6s infinite ease-in-out;
-}
-
-@keyframes float {
-    0%,100% { transform: translateY(0) scale(1); opacity: .8; }
-    50%     { transform: translateY(-40px) scale(1.4); opacity: 1; }
 }
 
 #blackout {
@@ -73,113 +53,79 @@ body {
 <div id="blackout"></div>
 
 <script>
-// ----------------------
-// Small helpers
-// ----------------------
 const $ = id => document.getElementById(id);
 
-// Floating sparkles
-for (let i = 0; i < 18; i++) {
-    const s = document.createElement("div");
-    s.className = "sparkle";
-    s.style.left = Math.random() * 100 + "vw";
-    s.style.top = Math.random() * 100 + "vh";
-    s.style.animationDuration = (4 + Math.random() * 4) + "s";
-    document.body.appendChild(s);
-}
-
-// Find repeated consecutive word
-const findDoubleWord = txt => {
-    const w = txt.trim().split(/\s+/);
-    for (let i = 0; i < w.length - 1; i++)
-        if (w[i] === w[i+1]) return w[i];
-    return "";
-};
-
-// ----------------------
+// ======================
 // Speech Recognition
-// ----------------------
+// ======================
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition, lastPartial = "", sttTO;
+let recognition;
+let listening = false;
+
+const TRIGGER = "אמרתי לך לחשוב על";
 
 if (SR) {
     recognition = new SR();
     recognition.lang = "he-IL";
+    recognition.continuous = true;
     recognition.interimResults = true;
 
-    recognition.onresult = e =>
-        lastPartial = e.results[0][0].transcript;
-
-    const stopAndProcess = () => {
-        clearTimeout(sttTO);
-        processSpeech(lastPartial);
+    recognition.onresult = e => {
+        const text = e.results[e.results.length - 1][0].transcript.trim();
+        handleSpeech(text);
     };
 
-    recognition.onerror = stopAndProcess;
-    recognition.onend = stopAndProcess;
+    recognition.onerror = restartListening;
+    recognition.onend = restartListening;
 }
 
 function startListening() {
-    if (!recognition) return;
-    lastPartial = "";
+    if (!recognition || listening) return;
+    listening = true;
     recognition.start();
-
-    sttTO = setTimeout(() => recognition.stop(), 5000);
 }
 
-function processSpeech(text) {
-    if (!text.trim()) return;
-    const rep = findDoubleWord(text);
-    if (rep) location.href = "https://www.google.com/search?q=" + encodeURIComponent(rep);
+function restartListening() {
+    if (!listening) return;
+    try {
+        recognition.start();
+    } catch {}
 }
 
-// ----------------------
-// Fullscreen + blackout
-// ----------------------
+function handleSpeech(text) {
+    const idx = text.indexOf(TRIGGER);
+    if (idx === -1) return;
+
+    const after = text.slice(idx + TRIGGER.length).trim();
+    if (!after) return;
+
+    const word = after.split(/\s+/)[0];
+    if (!word) return;
+
+    // STOP EVERYTHING and search
+    listening = false;
+    recognition.stop();
+
+    location.href =
+        "https://www.google.com/search?q=" +
+        encodeURIComponent(word);
+}
+
+// ======================
+// Fullscreen + Start
+// ======================
 async function goFullscreen() {
     try { await document.documentElement.requestFullscreen(); } catch {}
 }
 
-// ----------------------
-// Start button
-// ----------------------
-let shakeEnabled = false;
-
-$("startBtn").onclick = () => {
-    shakeEnabled = true;
-    goFullscreen().then(() => $("blackout").style.display = "block");
-
+$("startBtn").onclick = async () => {
+    await goFullscreen();
+    $("blackout").style.display = "block";
     $("title").style.display = "none";
     $("startBtn").style.display = "none";
+    startListening();
 };
-
-// ----------------------
-// Shake detection
-// ----------------------
-let lastShake = 0;
-
-function onMotion(ev) {
-    if (!shakeEnabled) return;
-    const a = ev.accelerationIncludingGravity;
-    if (!a) return;
-
-    const strength = Math.abs(a.x) + Math.abs(a.y) + Math.abs(a.z);
-    if (strength > 25 && Date.now() - lastShake > 1500) {
-        lastShake = Date.now();
-        startListening();
-    }
-}
-
-// iOS permission
-if (typeof DeviceMotionEvent?.requestPermission === "function") {
-    document.body.onclick = () => {
-        DeviceMotionEvent.requestPermission().then(res => {
-            if (res === "granted") window.addEventListener("devicemotion", onMotion);
-        });
-    };
-} else {
-    window.addEventListener("devicemotion", onMotion);
-}
 </script>
+
 </body>
 </html>
