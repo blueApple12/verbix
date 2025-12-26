@@ -194,11 +194,6 @@ function finish(word) {
     recognition.stop();
     releaseWakeLock();
 
-    // 🔔 vibration confirmation
-    if (navigator.vibrate) {
-        navigator.vibrate([120, 60, 120]);
-    }
-
     setTimeout(() => {
         // 🔒 no history entry
         location.replace(
