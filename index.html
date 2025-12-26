@@ -13,27 +13,45 @@ body {
     color: #ffdca8;
     font-family: Georgia, serif;
     text-align: center;
-    overflow: hidden;
 }
 
-#title {
-    margin-top: 40px;
-    font-size: 42px;
+h1 {
+    margin-top: 30px;
+    font-size: 38px;
     letter-spacing: 3px;
     text-shadow: 0 0 12px #ffbf66;
 }
 
-#startBtn {
-    margin-top: 70px;
-    padding: 16px 45px;
-    font-size: 24px;
+.panel {
+    margin-top: 40px;
+}
+
+label {
+    display: block;
+    margin-top: 25px;
+    font-size: 18px;
+}
+
+input {
+    margin-top: 8px;
+    padding: 10px;
+    font-size: 18px;
+    width: 80%;
+    max-width: 400px;
+    border-radius: 8px;
+    border: none;
+}
+
+button {
+    margin-top: 40px;
+    padding: 14px 40px;
+    font-size: 22px;
     border: none;
     border-radius: 12px;
     background: linear-gradient(180deg, #ffda8b, #d69a3c);
     color: #4a2a0f;
     font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 0 20px #ffcf70;
 }
 
 #blackout {
@@ -48,8 +66,22 @@ body {
 
 <body>
 
-<h1 id="title">VERBIX</h1>
-<button id="startBtn">Begin</button>
+<h1>VERBIX</h1>
+
+<div class="panel" id="menu">
+    <label>
+        START WORD / PHRASE (optional)
+        <input id="startWord" placeholder="אמרתי לך לחשוב על">
+    </label>
+
+    <label>
+        END WORD / PHRASE (optional)
+        <input id="endWord" placeholder="בחירה חופשית">
+    </label>
+
+    <button id="startBtn">Begin</button>
+</div>
+
 <div id="blackout"></div>
 
 <script>
@@ -62,7 +94,8 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition;
 let listening = false;
 
-const TRIGGER = "אמרתי לך לחשוב על";
+let START = "";
+let END = "";
 
 if (SR) {
     recognition = new SR();
@@ -87,22 +120,42 @@ function startListening() {
 
 function restartListening() {
     if (!listening) return;
-    try {
-        recognition.start();
-    } catch {}
+    try { recognition.start(); } catch {}
+}
+
+function cleanWords(txt) {
+    return txt.replace(/[.,!?״”“]/g, "").trim().split(/\s+/);
 }
 
 function handleSpeech(text) {
-    const idx = text.indexOf(TRIGGER);
-    if (idx === -1) return;
+    // Case 1: END WORD exists → take word BEFORE it
+    if (END) {
+        const idx = text.indexOf(END);
+        if (idx === -1) return;
 
-    const after = text.slice(idx + TRIGGER.length).trim();
-    if (!after) return;
+        const before = text.slice(0, idx).trim();
+        const words = cleanWords(before);
+        const word = words[words.length - 1];
+        if (!word) return;
 
-    const word = after.split(/\s+/)[0];
-    if (!word) return;
+        finish(word);
+    }
 
-    // STOP EVERYTHING and search
+    // Case 2: no END WORD → take word AFTER START WORD
+    else if (START) {
+        const idx = text.indexOf(START);
+        if (idx === -1) return;
+
+        const after = text.slice(idx + START.length).trim();
+        const words = cleanWords(after);
+        const word = words[0];
+        if (!word) return;
+
+        finish(word);
+    }
+}
+
+function finish(word) {
     listening = false;
     recognition.stop();
 
@@ -112,17 +165,24 @@ function handleSpeech(text) {
 }
 
 // ======================
-// Fullscreen + Start
+// Start
 // ======================
 async function goFullscreen() {
     try { await document.documentElement.requestFullscreen(); } catch {}
 }
 
 $("startBtn").onclick = async () => {
+    START = $("startWord").value.trim();
+    END   = $("endWord").value.trim();
+
+    if (!START && !END) {
+        alert("Please set at least a START or END phrase.");
+        return;
+    }
+
     await goFullscreen();
+    $("menu").style.display = "none";
     $("blackout").style.display = "block";
-    $("title").style.display = "none";
-    $("startBtn").style.display = "none";
     startListening();
 };
 </script>
