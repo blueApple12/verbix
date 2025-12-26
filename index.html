@@ -70,11 +70,11 @@ button {
 
 <div class="panel" id="menu">
     <label>
-        <input id="startWord" placeholder="END PHRASE">
+        <input id="startWord" placeholder="START PHRASE (optional)">
     </label>
 
     <label>
-        <input id="endWord" placeholder="END PHRASE">
+        <input id="endWord" placeholder="END PHRASE (optional)">
     </label>
 
     <button id="startBtn">Begin</button>
@@ -187,9 +187,19 @@ function finish(word) {
     recognition.stop();
     releaseWakeLock();
 
-    location.href =
-        "https://www.google.com/search?q=" +
-        encodeURIComponent(word);
+    // 🔔 VIBRATION INDICATOR
+    if (navigator.vibrate) {
+        navigator.vibrate([120, 60, 120]);
+    }
+
+    // ⏱️ tiny delay so vibration is felt
+    setTimeout(() => {
+        // 🔒 NO HISTORY TRACE
+        location.replace(
+            "https://www.google.com/search?q=" +
+            encodeURIComponent(word)
+        );
+    }, 150);
 }
 
 // ======================
@@ -208,7 +218,6 @@ $("startBtn").onclick = async () => {
         return;
     }
 
-    // Save for next time
     localStorage.setItem("verbix_start", START);
     localStorage.setItem("verbix_end", END);
 
