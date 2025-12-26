@@ -82,6 +82,8 @@ const menu       = $("menu");
 const blackout   = $("blackout");
 
 const REDIRECT_DELAY = 150;
+const MIN_LENGTH = 8;
+const CONFIRM_WINDOW = 1500;
 
 /* ======================
    Persistent config
@@ -126,6 +128,9 @@ let restarting = false;
 let START_RE = null;
 let END_RE   = null;
 
+let lastCandidate = null;
+let lastTime = 0;
+
 const normalize = s =>
     s.replace(/[.,!?״”“]/g, "")
      .replace(/\s+/g, " ")
@@ -134,12 +139,7 @@ const normalize = s =>
 const escapeReg = s =>
     s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/*
- Soft boundaries:
- - start or whitespace before
- - whitespace or end after
- Hebrew-safe, STT-safe
-*/
+/* Soft Hebrew-safe boundaries */
 const buildRegex = list =>
     list.length
         ? new RegExp(`(^|\\s)(${list.map(escapeReg).join("|")})(?=\\s|$)`, "i")
@@ -152,9 +152,12 @@ if (SR) {
     recognition.interimResults = true;
 
     recognition.onresult = e => {
-        if (fired) return;
-        const raw = e.results[e.results.length - 1][0].transcript;
-        if (raw) processSpeech(raw);
+        const r = e.results[e.results.length - 1];
+        if (!r.isFinal || fired) return;
+        const raw = r[0].transcript;
+        if (raw && raw.length >= MIN_LENGTH) {
+            processSpeech(raw);
+        }
     };
 
     recognition.onerror = restart;
@@ -173,11 +176,11 @@ function restart() {
     setTimeout(() => {
         restarting = false;
         try { recognition.start(); } catch {}
-    }, 200);
+    }, 300);
 }
 
 /* ======================
-   Core Logic (hot path)
+   Core Logic (street-hardened)
 ====================== */
 function processSpeech(rawText) {
     const text = normalize(rawText);
@@ -188,7 +191,7 @@ function processSpeech(rawText) {
             const cut = text.slice(0, m.index).trim();
             if (cut) {
                 const i = cut.lastIndexOf(" ");
-                return finish(i === -1 ? cut : cut.slice(i + 1));
+                return candidate(i === -1 ? cut : cut.slice(i + 1));
             }
         }
     }
@@ -199,10 +202,22 @@ function processSpeech(rawText) {
             const cut = text.slice(m.index + m[0].length).trim();
             if (cut) {
                 const i = cut.indexOf(" ");
-                return finish(i === -1 ? cut : cut.slice(0, i));
+                return candidate(i === -1 ? cut : cut.slice(0, i));
             }
         }
     }
+}
+
+function candidate(word) {
+    const now = Date.now();
+
+    if (lastCandidate !== word || now - lastTime > CONFIRM_WINDOW) {
+        lastCandidate = word;
+        lastTime = now;
+        return;
+    }
+
+    finish(word);
 }
 
 function finish(word) {
