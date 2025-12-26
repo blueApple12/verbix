@@ -70,11 +70,11 @@ button {
 
 <div class="panel" id="menu">
     <label>
-        <input id="startWord" placeholder="Start Phrase">
+        <input id="startWord" placeholder="Start Phrases">
     </label>
 
     <label>
-        <input id="endWord" placeholder="End Phrase">
+        <input id="endWord" placeholder="End Phrases">
     </label>
 
     <button id="startBtn">Start</button>
@@ -124,8 +124,8 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition;
 let listening = false;
 
-let START = "";
-let END = "";
+let STARTS = [];
+let ENDS = [];
 
 if (SR) {
     recognition = new SR();
@@ -157,28 +157,35 @@ function cleanWords(txt) {
     return txt.replace(/[.,!?״”“]/g, "").trim().split(/\s+/);
 }
 
+// ======================
+// Core logic
+// ======================
 function handleSpeech(text) {
-    if (END) {
-        const idx = text.indexOf(END);
-        if (idx === -1) return;
 
-        const before = text.slice(0, idx).trim();
-        const words = cleanWords(before);
-        const word = words[words.length - 1];
-        if (!word) return;
+    // END phrases → word BEFORE
+    if (ENDS.length) {
+        for (const phrase of ENDS) {
+            const idx = text.indexOf(phrase);
+            if (idx === -1) continue;
 
-        finish(word);
-    } 
-    else if (START) {
-        const idx = text.indexOf(START);
-        if (idx === -1) return;
+            const before = text.slice(0, idx).trim();
+            const words = cleanWords(before);
+            const word = words[words.length - 1];
+            if (word) return finish(word);
+        }
+    }
 
-        const after = text.slice(idx + START.length).trim();
-        const words = cleanWords(after);
-        const word = words[0];
-        if (!word) return;
+    // START phrases → word AFTER
+    if (STARTS.length) {
+        for (const phrase of STARTS) {
+            const idx = text.indexOf(phrase);
+            if (idx === -1) continue;
 
-        finish(word);
+            const after = text.slice(idx + phrase.length).trim();
+            const words = cleanWords(after);
+            const word = words[0];
+            if (word) return finish(word);
+        }
     }
 }
 
@@ -187,14 +194,13 @@ function finish(word) {
     recognition.stop();
     releaseWakeLock();
 
-    // 🔔 VIBRATION INDICATOR
+    // 🔔 vibration confirmation
     if (navigator.vibrate) {
         navigator.vibrate([120, 60, 120]);
     }
 
-    // ⏱️ tiny delay so vibration is felt
     setTimeout(() => {
-        // 🔒 NO HISTORY TRACE
+        // 🔒 no history entry
         location.replace(
             "https://www.google.com/search?q=" +
             encodeURIComponent(word)
@@ -210,16 +216,24 @@ async function goFullscreen() {
 }
 
 $("startBtn").onclick = async () => {
-    START = $("startWord").value.trim();
-    END   = $("endWord").value.trim();
 
-    if (!START && !END) {
-        alert("Please set at least a START or END phrase.");
+    STARTS = $("startWord").value
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean);
+
+    ENDS = $("endWord").value
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean);
+
+    if (!STARTS.length && !ENDS.length) {
+        alert("Please set at least one START or END phrase.");
         return;
     }
 
-    localStorage.setItem("verbix_start", START);
-    localStorage.setItem("verbix_end", END);
+    localStorage.setItem("verbix_start", $("startWord").value.trim());
+    localStorage.setItem("verbix_end", $("endWord").value.trim());
 
     await goFullscreen();
     enableWakeLock();
