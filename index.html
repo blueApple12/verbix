@@ -26,8 +26,14 @@ h1 {
     margin-top: 40px;
 }
 
+label {
+    display: block;
+    margin-top: 25px;
+    font-size: 18px;
+}
+
 input {
-    margin-top: 12px;
+    margin-top: 8px;
     padding: 10px;
     font-size: 18px;
     width: 80%;
@@ -63,39 +69,31 @@ button {
 <h1>VERBIX</h1>
 
 <div class="panel" id="menu">
-    <input id="startWord" placeholder="Start Phrase (comma separated)">
-    <input id="endWord" placeholder="End Phrase (comma separated)">
+    <label>
+        <input id="startWord" placeholder="Start Phrases">
+    </label>
+
+    <label>
+        <input id="endWord" placeholder="End Phrases">
+    </label>
+
     <button id="startBtn">Start</button>
 </div>
 
 <div id="blackout"></div>
 
 <script>
-/* ======================
-   DOM
-====================== */
 const $ = id => document.getElementById(id);
 
-const startInput = $("startWord");
-const endInput   = $("endWord");
-const menu       = $("menu");
-const blackout   = $("blackout");
+// ======================
+// Restore saved values
+// ======================
+$("startWord").value = localStorage.getItem("verbix_start") || "";
+$("endWord").value   = localStorage.getItem("verbix_end")   || "";
 
-/* ======================
-   Constants (street tuned)
-====================== */
-const REDIRECT_DELAY = 150;
-const MIN_TEXT_LEN = 6;
-
-/* ======================
-   Persistent storage
-====================== */
-startInput.value = localStorage.getItem("verbix_start") || "";
-endInput.value   = localStorage.getItem("verbix_end")   || "";
-
-/* ======================
-   Wake Lock
-====================== */
+// ======================
+// Screen Wake Lock
+// ======================
 let wakeLock = null;
 
 async function enableWakeLock() {
@@ -107,139 +105,121 @@ async function enableWakeLock() {
 }
 
 function releaseWakeLock() {
-    try { wakeLock?.release(); } catch {}
-    wakeLock = null;
+    try {
+        wakeLock?.release();
+        wakeLock = null;
+    } catch {}
 }
 
-/* ======================
-   Speech Recognition
-====================== */
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && wakeLock) {
+        enableWakeLock();
+    }
+});
+
+// ======================
+// Speech Recognition
+// ======================
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition = null;
+let recognition;
+let listening = false;
 
-let active = false;
-let fired = false;
-let restarting = false;
-
-let START_RE = null;
-let END_RE   = null;
-
-const normalize = s =>
-    s.replace(/[.,!?״”“]/g, "")
-     .replace(/\s+/g, " ")
-     .trim();
-
-const escapeReg = s =>
-    s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const buildRegex = list =>
-    list.length
-        ? new RegExp(`(^|\\s)(${list.map(escapeReg).join("|")})(?=\\s|$)`, "i")
-        : null;
+let STARTS = [];
+let ENDS = [];
 
 if (SR) {
     recognition = new SR();
     recognition.lang = "he-IL";
     recognition.continuous = true;
-    recognition.interimResults = false; // 🔥 critical for noise
+    recognition.interimResults = true;
 
     recognition.onresult = e => {
-        if (fired) return;
-
-        const res = e.results[e.results.length - 1];
-        if (!res.isFinal) return;
-
-        const raw = res[0].transcript;
-        if (!raw) return;
-
-        processSpeech(raw);
+        const text = e.results[e.results.length - 1][0].transcript.trim();
+        handleSpeech(text);
     };
 
-    recognition.onerror = restart;
-    recognition.onend   = restart;
+    recognition.onerror = restartListening;
+    recognition.onend = restartListening;
 }
 
 function startListening() {
-    if (!recognition || active) return;
-    active = true;
+    if (!recognition || listening) return;
+    listening = true;
+    recognition.start();
+}
+
+function restartListening() {
+    if (!listening) return;
     try { recognition.start(); } catch {}
 }
 
-function restart() {
-    if (!active || fired || restarting) return;
-    restarting = true;
-    setTimeout(() => {
-        restarting = false;
-        try { recognition.start(); } catch {}
-    }, 500);
+function cleanWords(txt) {
+    return txt.replace(/[.,!?״”“]/g, "").trim().split(/\s+/);
 }
 
-/* ======================
-   Core Logic
-====================== */
-function processSpeech(rawText) {
-    if (rawText.length < MIN_TEXT_LEN) return;
-    if (!/[א-ת]/.test(rawText)) return;
+// ======================
+// Core logic
+// ======================
+function handleSpeech(text) {
 
-    const text = normalize(rawText);
-    let hit = null;
+    // END phrases → word BEFORE
+    if (ENDS.length) {
+        for (const phrase of ENDS) {
+            const idx = text.indexOf(phrase);
+            if (idx === -1) continue;
 
-    if (END_RE) {
-        const m = text.match(END_RE);
-        if (m) {
-            const cut = text.slice(0, m.index).trim();
-            if (cut) {
-                const i = cut.lastIndexOf(" ");
-                hit = i === -1 ? cut : cut.slice(i + 1);
-            }
+            const before = text.slice(0, idx).trim();
+            const words = cleanWords(before);
+            const word = words[words.length - 1];
+            if (word) return finish(word);
         }
     }
 
-    if (!hit && START_RE) {
-        const m = text.match(START_RE);
-        if (m) {
-            const cut = text.slice(m.index + m[0].length).trim();
-            if (cut) {
-                const i = cut.indexOf(" ");
-                hit = i === -1 ? cut : cut.slice(0, i);
-            }
+    // START phrases → word AFTER
+    if (STARTS.length) {
+        for (const phrase of STARTS) {
+            const idx = text.indexOf(phrase);
+            if (idx === -1) continue;
+
+            const after = text.slice(idx + phrase.length).trim();
+            const words = cleanWords(after);
+            const word = words[0];
+            if (word) return finish(word);
         }
     }
-
-    if (hit) fire(hit);
 }
 
-function fire(word) {
-    fired = true;
-    active = false;
-
-    try { recognition.stop(); } catch {}
+function finish(word) {
+    listening = false;
+    recognition.stop();
     releaseWakeLock();
 
     setTimeout(() => {
+        // 🔒 no history entry
         location.replace(
             "https://www.google.com/search?q=" +
             encodeURIComponent(word)
         );
-    }, REDIRECT_DELAY);
+    }, 150);
 }
 
-/* ======================
-   UI
-====================== */
+// ======================
+// Start button
+// ======================
 async function goFullscreen() {
     try { await document.documentElement.requestFullscreen(); } catch {}
 }
 
 $("startBtn").onclick = async () => {
-    const STARTS = startInput.value
+
+    STARTS = $("startWord").value
         .split(",")
-        .map(normalize)
+        .map(s => s.trim())
         .filter(Boolean);
 
-    const ENDS = endInput.value
+    ENDS = $("endWord").value
         .split(",")
-        .map(normalize)
+        .map(s => s.trim())
         .filter(Boolean);
 
     if (!STARTS.length && !ENDS.length) {
@@ -247,17 +227,14 @@ $("startBtn").onclick = async () => {
         return;
     }
 
-    START_RE = buildRegex(STARTS);
-    END_RE   = buildRegex(ENDS);
-
-    localStorage.setItem("verbix_start", startInput.value);
-    localStorage.setItem("verbix_end",   endInput.value);
+    localStorage.setItem("verbix_start", $("startWord").value.trim());
+    localStorage.setItem("verbix_end", $("endWord").value.trim());
 
     await goFullscreen();
     enableWakeLock();
 
-    menu.style.display = "none";
-    blackout.style.display = "block";
+    $("menu").style.display = "none";
+    $("blackout").style.display = "block";
 
     startListening();
 };
