@@ -63,8 +63,8 @@ button {
 <h1>VERBIX</h1>
 
 <div class="panel" id="menu">
-    <input id="startWord" placeholder="Start Phrase">
-    <input id="endWord" placeholder="End Phrase">
+    <input id="startWord" placeholder="Start Phrases (comma separated)">
+    <input id="endWord" placeholder="End Phrases (comma separated)">
     <button id="startBtn">Start</button>
 </div>
 
@@ -72,7 +72,7 @@ button {
 
 <script>
 /* ======================
-   DOM & constants
+   Helpers & DOM
 ====================== */
 const $ = id => document.getElementById(id);
 
@@ -82,11 +82,9 @@ const menu       = $("menu");
 const blackout   = $("blackout");
 
 const REDIRECT_DELAY = 150;
-const MIN_TEXT_LEN   = 6;
-const MIN_CONFIDENCE = 0.6;
 
 /* ======================
-   Persistent storage
+   Persistent config
 ====================== */
 startInput.value = localStorage.getItem("verbix_start") || "";
 endInput.value   = localStorage.getItem("verbix_end")   || "";
@@ -109,22 +107,27 @@ function releaseWakeLock() {
     wakeLock = null;
 }
 
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && active) {
+        enableWakeLock();
+    }
+});
+
 /* ======================
    Speech Recognition
 ====================== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
-
 let active = false;
 let fired = false;
 let restarting = false;
-let lastTranscript = "";
 
 let START_RE = null;
 let END_RE   = null;
 
 const normalize = s =>
-    s.replace(/[.,!?״”“]/g, "")
+    s.toLowerCase()
+     .replace(/[.,!?״”“]/g, "")
      .replace(/\s+/g, " ")
      .trim();
 
@@ -133,28 +136,19 @@ const escapeReg = s =>
 
 const buildRegex = list =>
     list.length
-        ? new RegExp(`(^|\\s)(${list.map(escapeReg).join("|")})(?=\\s|$)`, "i")
+        ? new RegExp(`\\b(${list.map(escapeReg).join("|")})\\b`, "i")
         : null;
 
 if (SR) {
     recognition = new SR();
     recognition.lang = "he-IL";
     recognition.continuous = true;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
 
     recognition.onresult = e => {
         if (fired) return;
-
-        const res = e.results[e.results.length - 1];
-        if (!res.isFinal) return;
-
-        if (res[0].confidence < MIN_CONFIDENCE) return;
-
-        const raw = res[0].transcript;
-        if (!raw || raw === lastTranscript) return;
-
-        lastTranscript = raw;
-        processSpeech(raw);
+        const raw = e.results[e.results.length - 1][0].transcript;
+        if (raw) processSpeech(raw);
     };
 
     recognition.onerror = restart;
@@ -173,45 +167,41 @@ function restart() {
     setTimeout(() => {
         restarting = false;
         try { recognition.start(); } catch {}
-    }, 500);
+    }, 200);
 }
 
 /* ======================
-   Core logic
+   Core Logic (optimized hot path)
 ====================== */
 function processSpeech(rawText) {
-    if (rawText.length < MIN_TEXT_LEN) return;
-    if (!/[א-ת]/.test(rawText)) return;
-
     const text = normalize(rawText);
-    let hit = null;
 
     if (END_RE) {
         const m = text.match(END_RE);
         if (m) {
-            const before = text.slice(0, m.index).trim();
-            if (before) {
-                const i = before.lastIndexOf(" ");
-                hit = i === -1 ? before : before.slice(i + 1);
+            const cut = text.slice(0, m.index).trim();
+            if (cut) {
+                const i = cut.lastIndexOf(" ");
+                return finish(i === -1 ? cut : cut.slice(i + 1));
             }
         }
     }
 
-    if (!hit && START_RE) {
+    if (START_RE) {
         const m = text.match(START_RE);
         if (m) {
-            const after = text.slice(m.index + m[0].length).trim();
-            if (after) {
-                const i = after.indexOf(" ");
-                hit = i === -1 ? after : after.slice(0, i);
+            const cut = text
+                .slice(m.index + m[0].length)
+                .trim();
+            if (cut) {
+                const i = cut.indexOf(" ");
+                return finish(i === -1 ? cut : cut.slice(0, i));
             }
         }
     }
-
-    if (hit && hit.length >= 2) fire(hit);
 }
 
-function fire(word) {
+function finish(word) {
     fired = true;
     active = false;
 
@@ -227,7 +217,7 @@ function fire(word) {
 }
 
 /* ======================
-   UI
+   UI Actions
 ====================== */
 async function goFullscreen() {
     try { await document.documentElement.requestFullscreen(); } catch {}
