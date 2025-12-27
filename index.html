@@ -63,8 +63,8 @@ button {
 <h1>VERBIX</h1>
 
 <div class="panel" id="menu">
-    <input id="startWord" placeholder="Start Phrase">
-    <input id="endWord" placeholder="End Phrase">
+    <input id="startWord" placeholder="Start Phrase (comma separated)">
+    <input id="endWord" placeholder="End Phrase (comma separated)">
     <button id="startBtn">Start</button>
 </div>
 
@@ -72,7 +72,7 @@ button {
 
 <script>
 /* ======================
-   DOM & Constants
+   DOM
 ====================== */
 const $ = id => document.getElementById(id);
 
@@ -81,12 +81,14 @@ const endInput   = $("endWord");
 const menu       = $("menu");
 const blackout   = $("blackout");
 
+/* ======================
+   Constants (street tuned)
+====================== */
 const REDIRECT_DELAY = 150;
-const MIN_LENGTH = 8;
-const CONFIRM_WINDOW = 1500;
+const MIN_TEXT_LEN = 6;
 
 /* ======================
-   Persistent config
+   Persistent storage
 ====================== */
 startInput.value = localStorage.getItem("verbix_start") || "";
 endInput.value   = localStorage.getItem("verbix_end")   || "";
@@ -109,12 +111,6 @@ function releaseWakeLock() {
     wakeLock = null;
 }
 
-document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && active) {
-        enableWakeLock();
-    }
-});
-
 /* ======================
    Speech Recognition
 ====================== */
@@ -128,9 +124,6 @@ let restarting = false;
 let START_RE = null;
 let END_RE   = null;
 
-let lastCandidate = null;
-let lastTime = 0;
-
 const normalize = s =>
     s.replace(/[.,!?״”“]/g, "")
      .replace(/\s+/g, " ")
@@ -139,7 +132,6 @@ const normalize = s =>
 const escapeReg = s =>
     s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/* Soft Hebrew-safe boundaries */
 const buildRegex = list =>
     list.length
         ? new RegExp(`(^|\\s)(${list.map(escapeReg).join("|")})(?=\\s|$)`, "i")
@@ -149,15 +141,18 @@ if (SR) {
     recognition = new SR();
     recognition.lang = "he-IL";
     recognition.continuous = true;
-    recognition.interimResults = true;
+    recognition.interimResults = false; // 🔥 critical for noise
 
     recognition.onresult = e => {
-        const r = e.results[e.results.length - 1];
-        if (!r.isFinal || fired) return;
-        const raw = r[0].transcript;
-        if (raw && raw.length >= MIN_LENGTH) {
-            processSpeech(raw);
-        }
+        if (fired) return;
+
+        const res = e.results[e.results.length - 1];
+        if (!res.isFinal) return;
+
+        const raw = res[0].transcript;
+        if (!raw) return;
+
+        processSpeech(raw);
     };
 
     recognition.onerror = restart;
@@ -176,14 +171,18 @@ function restart() {
     setTimeout(() => {
         restarting = false;
         try { recognition.start(); } catch {}
-    }, 300);
+    }, 500);
 }
 
 /* ======================
-   Core Logic (street-hardened)
+   Core Logic
 ====================== */
 function processSpeech(rawText) {
+    if (rawText.length < MIN_TEXT_LEN) return;
+    if (!/[א-ת]/.test(rawText)) return;
+
     const text = normalize(rawText);
+    let hit = null;
 
     if (END_RE) {
         const m = text.match(END_RE);
@@ -191,36 +190,26 @@ function processSpeech(rawText) {
             const cut = text.slice(0, m.index).trim();
             if (cut) {
                 const i = cut.lastIndexOf(" ");
-                return candidate(i === -1 ? cut : cut.slice(i + 1));
+                hit = i === -1 ? cut : cut.slice(i + 1);
             }
         }
     }
 
-    if (START_RE) {
+    if (!hit && START_RE) {
         const m = text.match(START_RE);
         if (m) {
             const cut = text.slice(m.index + m[0].length).trim();
             if (cut) {
                 const i = cut.indexOf(" ");
-                return candidate(i === -1 ? cut : cut.slice(0, i));
+                hit = i === -1 ? cut : cut.slice(0, i);
             }
         }
     }
+
+    if (hit) fire(hit);
 }
 
-function candidate(word) {
-    const now = Date.now();
-
-    if (lastCandidate !== word || now - lastTime > CONFIRM_WINDOW) {
-        lastCandidate = word;
-        lastTime = now;
-        return;
-    }
-
-    finish(word);
-}
-
-function finish(word) {
+function fire(word) {
     fired = true;
     active = false;
 
@@ -236,14 +225,13 @@ function finish(word) {
 }
 
 /* ======================
-   UI Actions
+   UI
 ====================== */
 async function goFullscreen() {
     try { await document.documentElement.requestFullscreen(); } catch {}
 }
 
 $("startBtn").onclick = async () => {
-
     const STARTS = startInput.value
         .split(",")
         .map(normalize)
