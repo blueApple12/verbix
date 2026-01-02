@@ -2,211 +2,97 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <title>Verbix PRO</title>
-    
-    <link rel="icon" type="image/jpeg" href="logo.jpg">
-    <link rel="apple-touch-icon" href="logo.jpg">
-
+    <link rel="icon" href="logo.jpg">
     <style>
-        :root { --gold: #d69a3c; --deep-orange: #a35d14; --bg: #050301; }
+        :root { --gold: #d69a3c; --bg: #050301; }
         body { margin: 0; background: var(--bg); color: #ffdca8; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; }
-        
         canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-
         #menu { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        
-        /* The Logo Text - Styled like the image */
-        .logo-wrap { position: relative; margin-bottom: 50px; cursor: default; }
-        h1 { 
-            font-size: 75px; 
-            margin: 0; 
-            letter-spacing: 2px; 
-            font-weight: 900;
-            /* Multi-stage gold gradient */
-            background: linear-gradient(to bottom, 
-                #fff 0%, 
-                #ffe0b2 20%, 
-                var(--gold) 45%, 
-                var(--deep-orange) 50%, 
-                var(--gold) 55%, 
-                #4c2b0a 100%
-            );
-            -webkit-background-clip: text; 
-            -webkit-text-fill-color: transparent; 
-            filter: drop-shadow(0 4px 15px rgba(0,0,0,0.8)) drop-shadow(0 0 2px var(--gold));
-        }
-
-        .pro-tag { 
-            position: absolute; 
-            top: -10px; 
-            left: -40px; 
-            font-size: 14px; 
-            border: 2px solid var(--gold); 
-            padding: 3px 8px; 
-            color: var(--gold); 
-            transform: rotate(-12deg); 
-            font-weight: 900; 
-            background: var(--bg);
-            border-radius: 4px;
-            box-shadow: 0 0 10px rgba(214,154,60,0.3);
-        }
-
-        input { 
-            width: 85%; 
-            max-width: 380px; 
-            padding: 16px; 
-            margin: 12px; 
-            border-radius: 15px; 
-            border: 1px solid #333; 
-            background: rgba(10, 10, 10, 0.8); 
-            color: #fff; 
-            text-align: center; 
-            font-size: 18px; 
-            backdrop-filter: blur(10px); 
-            outline: none;
-            transition: 0.3s;
-        }
-        input:focus { border-color: var(--gold); box-shadow: 0 0 15px rgba(214,154,60,0.2); }
-
-        button { 
-            margin-top: 30px; 
-            padding: 18px 80px; 
-            border-radius: 50px; 
-            background: linear-gradient(var(--gold), var(--deep-orange));
-            color: #000; 
-            font-weight: bold; 
-            border: none; 
-            cursor: pointer; 
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5); 
-            font-size: 20px; 
-            letter-spacing: 1px;
-            transition: 0.2s;
-        }
-        button:active { transform: scale(0.96); opacity: 0.9; }
-        
+        .logo-wrap { position: relative; margin-bottom: 50px; }
+        h1 { font-size: 75px; margin: 0; letter-spacing: 2px; font-weight: 900; background: linear-gradient(to bottom, #fff 0%, #ffe0b2 25%, var(--gold) 45%, #a35d14 50%, var(--gold) 55%, #4c2b0a 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 4px 15px rgba(0,0,0,0.8)); }
+        .pro-tag { position: absolute; top: -10px; left: -40px; font-size: 14px; border: 2px solid var(--gold); padding: 3px 8px; color: var(--gold); transform: rotate(-12deg); font-weight: 900; background: var(--bg); border-radius: 4px; }
+        input { width: 85%; max-width: 380px; padding: 16px; margin: 12px; border-radius: 15px; border: 1px solid #333; background: rgba(10,10,10,.8); color: #fff; text-align: center; font-size: 18px; outline: none; }
+        button { margin-top: 30px; padding: 18px 80px; border-radius: 50px; background: linear-gradient(var(--gold),#a35d14); color: #000; font-weight: bold; border: none; cursor: pointer; font-size: 20px; transition: .2s; }
+        button:active { transform: scale(.96); }
         #blackout { position: fixed; inset: 0; background: #000; z-index: 99; display: none; touch-action: none; }
     </style>
 </head>
 <body>
-
 <canvas id="canvas"></canvas>
-
 <div id="menu">
-    <div class="logo-wrap">
-        <span class="pro-tag">PRO</span>
-        <h1>VERBIX</h1>
-    </div>
-    <input id="startWord" placeholder="Start Phrase">
-    <input id="endWord" placeholder="End Phrase">
+    <div class="logo-wrap"><span class="pro-tag">PRO</span><h1>VERBIX</h1></div>
+    <input id="startWord" placeholder="Trigger Start">
+    <input id="endWord" placeholder="Trigger End">
     <button id="startBtn">ACTIVATE</button>
 </div>
-
 <div id="blackout"></div>
 
 <script>
-/* ===================== CANVAS PARTICLES ===================== */
-const $ = id => document.getElementById(id);
-const canvas = $("canvas"), ctx = canvas.getContext("2d");
-const menu = $("menu"), blackout = $("blackout");
-const startInp = $("startWord"), endInp = $("endWord"), startBtn = $("startBtn");
-const vib = p => navigator.vibrate?.(p);
+const $ = id => document.getElementById(id), cvs = $("canvas"), ctx = cvs.getContext("2d");
+const menu = $("menu"), blackout = $("blackout"), vib = p => navigator.vibrate?.(p);
+let W, H, sTrie, eTrie, curW="", listening=false, lastF=0;
 
-let W, H;
-function resize(){ W=canvas.width=innerWidth; H=canvas.height=innerHeight; }
+// Particles
+const resize = () => { W=cvs.width=innerWidth; H=cvs.height=innerHeight; };
 window.onresize = resize; resize();
-
-class Particle {
+class P {
     constructor(){ this.reset(); }
-    reset(){
-        this.x=Math.random()*W; this.y=Math.random()*H;
-        this.r=Math.random()*2+1; this.v=Math.random()*0.4+0.15; this.o=Math.random();
-    }
-    draw(){
-        this.y-=this.v; this.o-=0.0015;
-        if(this.y<0||this.o<=0) this.reset();
-        ctx.fillStyle=`rgba(214,154,60,${this.o})`;
-        ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill();
-    }
+    reset(){ this.x=Math.random()*W; this.y=Math.random()*H; this.r=Math.random()*2+1; this.v=Math.random()*0.4+0.1; this.o=Math.random(); }
+    draw(){ this.y-=this.v; this.o-=0.002; if(this.y<0||this.o<=0) this.reset(); ctx.fillStyle=`rgba(214,154,60,${this.o})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,7); ctx.fill(); }
 }
-const particles=[...Array(60)].map(()=>new Particle());
-(function anim(){
-    ctx.clearRect(0,0,W,H);
-    particles.forEach(p=>p.draw());
-    requestAnimationFrame(anim);
-})();
+const pts = [...Array(50)].map(()=>new P());
+(function anim(){ ctx.clearRect(0,0,W,H); pts.forEach(p=>p.draw()); requestAnimationFrame(anim); })();
 
-/* ===================== TRIE LOGIC ===================== */
-class TrieNode { constructor(){ this.c={}; this.end=false; } }
+// Trie Logic
 class Trie {
-    constructor(){ this.root=new TrieNode(); }
-    add(word){
-        let n=this.root;
-        for(const ch of word){ if(!n.c[ch]) n.c[ch]=new TrieNode(); n=n.c[ch]; }
-        n.end=true;
-    }
-    match(text, cb){
-        for(let i=0;i<text.length;i++){
-            let n=this.root, j=i;
-            while(n && n.c[text[j]]){ n=n.c[text[j]]; if(n.end) cb(i,j+1); j++; }
-        }
-    }
+    constructor(){ this.root={c:{},e:false}; }
+    add(w){ let n=this.root; for(let c of w){ if(!n.c[c]) n.c[c]={c:{},e:false}; n=n.c[c]; } n.e=true; }
+    match(t, cb){ for(let i=0;i<t.length;i++){ let n=this.root, j=i; while(n && n.c[t[j]]){ n=n.c[t[j]]; if(n.e) cb(i,j+1); j++; } } }
 }
 
-/* ===================== SPEECH & REVEAL ===================== */
-let startTrie, endTrie, currentWord="", listening=false, lastFire=0;
+// Speech
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = SR ? new SR() : null;
-
-if(recognition){
-    recognition.lang="he-IL"; recognition.continuous=true; recognition.interimResults=true;
-    recognition.onresult=e=>{
-        const now=Date.now();
-        const text=[...e.results].map(r=>r[0].transcript).join(" ").toLowerCase().trim();
-        if(text.length < 4 || now - lastFire < 700) return;
-
-        startTrie?.match(text,(s,e)=>{ extract(text.slice(e)); lastFire=now; });
-        endTrie?.match(text,(s,e)=>{ extract(text.slice(0,s)); lastFire=now; });
+const rec = SR ? new SR() : null;
+if(rec){
+    rec.lang="he-IL"; rec.continuous=true; rec.interimResults=true;
+    rec.onresult = e => {
+        const text = [...e.results].map(r=>r[0].transcript).join(" ").toLowerCase().trim();
+        const now = Date.now();
+        if(text.length < 3 || now - lastF < 700) return;
+        sTrie?.match(text, (s,e)=>{ extract(text.slice(e)); lastF=now; });
+        eTrie?.match(text, (s,e)=>{ extract(text.slice(0,s)); lastF=now; });
     };
-    recognition.onend=()=>listening&&recognition.start();
+    rec.onend = () => listening && rec.start();
 }
 
-function extract(str){
-    const w=str.trim().split(/\s+/).pop()?.replace(/[.,!?״]/g,"");
-    if(w && w!==currentWord){ currentWord=w; vib([150,50,150]); }
+function extract(s){
+    const w = s.trim().split(/\s+/).pop()?.replace(/[.,!?״"']/g,"");
+    if(w && w!==curW){ curW=w; vib([150,50,150]); }
 }
 
-/* ===================== GESTURES ===================== */
-let startY=0;
-blackout.ontouchstart=e=>{ if(e.touches.length===1) startY=e.touches[0].clientY; };
-blackout.ontouchend=e=>{
-    const dy=startY-e.changedTouches[0].clientY;
-    if(e.changedTouches.length>0 && e.touches.length >= 1 && dy>100) location.reload();
-    else if(Math.abs(dy)<15) currentWord ? reveal() : vib(40);
+// Gestures
+let sY=0;
+blackout.ontouchstart = e => sY = e.touches[0].clientY;
+blackout.ontouchend = e => {
+    const dY = sY - e.changedTouches[0].clientY;
+    if(e.changedTouches.length > 0 && e.touches.length >= 1 && dY > 100) location.reload();
+    else if(Math.abs(dY) < 15) curW ? (listening=false, rec?.stop(), location.href=`https://www.google.com/search?q=${encodeURIComponent(curW)}`) : vib(40);
 };
 
-function reveal(){
-    listening=false; recognition?.stop();
-    location.href=`https://www.google.com/search?q=${encodeURIComponent(currentWord)}`;
-}
-
-function start(){
-    startTrie=new Trie(); endTrie=new Trie();
-    startInp.value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean).forEach(p=>startTrie.add(p));
-    endInp.value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean).forEach(p=>endTrie.add(p));
-    localStorage.v_start=startInp.value; localStorage.v_end=endInp.value;
-
-    menu.style.display="none";
-    blackout.style.display="block";
-
-    listening=true; recognition?.start(); vib(100);
+$("startBtn").onclick = () => {
+    sTrie=new Trie(); eTrie=new Trie();
+    $("startWord").value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean).forEach(p=>sTrie.add(p));
+    $("endWord").value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean).forEach(p=>eTrie.add(p));
+    localStorage.v_s=$("startWord").value; localStorage.v_e=$("endWord").value;
+    menu.style.display="none"; blackout.style.display="block";
+    listening=true; rec?.start(); vib(100);
     document.documentElement.requestFullscreen().catch(()=>{});
-}
+};
 
-/* ===================== INIT ===================== */
-startInp.value=localStorage.v_start||"";
-endInp.value=localStorage.v_end||"";
-startBtn.onclick=start;
+$("startWord").value = localStorage.v_s || "";
+$("endWord").value = localStorage.v_e || "";
 </script>
 </body>
 </html>
