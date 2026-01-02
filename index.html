@@ -1,172 +1,139 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verbix PRO</title>
-<style>
-    :root {
-        --gold: #d69a3c;
-        --bg: #0a0502;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verbix PRO</title>
+    <style>
+        :root { --gold: #d69a3c; --bg: #050301; }
+        body { 
+            margin: 0; background: var(--bg); color: #ffdca8; 
+            font-family: system-ui, sans-serif; overflow: hidden; height: 100vh;
+        }
+        
+        /* Animated Background Canvas */
+        canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 
-    body { 
-        margin: 0; padding: 0; 
-        background: radial-gradient(circle at center, #1a0f08 0%, var(--bg) 100%);
-        color: #ffdca8; 
-        font-family: 'Segoe UI', sans-serif; 
-        text-align: center; 
-        overflow: hidden; 
-        height: 100vh;
-    }
-
-    #menu { 
-        display: flex; 
-        flex-direction: column; 
-        align-items: center; 
-        justify-content: center; 
-        height: 100vh; 
-        padding: 0 30px;
-    }
-
-    .logo-container { margin-bottom: 40px; position: relative; }
-
-    h1 { 
-        font-size: 62px; margin: 0; letter-spacing: 8px; text-transform: uppercase; font-weight: 900;
-        background: linear-gradient(180deg, #fff 30%, var(--gold) 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
-
-    .pro-badge {
-        position: absolute; top: 10px; left: -45px; font-size: 14px; letter-spacing: 2px;
-        color: var(--gold); border: 1px solid var(--gold); padding: 2px 8px;
-        border-radius: 4px; font-weight: bold; transform: rotate(-10deg);
-    }
-
-    input { 
-        width: 100%; max-width: 400px; padding: 16px; margin: 10px 0;
-        border-radius: 12px; border: 1px solid rgba(214, 154, 60, 0.3); 
-        font-size: 18px; background: rgba(20, 10, 5, 0.8); color: #fff; text-align: center;
-    }
-
-    button { 
-        margin-top: 30px; padding: 18px 60px; font-size: 22px; border-radius: 50px; 
-        background: linear-gradient(135deg, #ffda8b 0%, var(--gold) 100%); 
-        color: #2b1407; font-weight: 800; cursor: pointer; border: none; 
-    }
-
-    #blackout { 
-        position: fixed; inset: 0; background: #000; z-index: 9999; 
-        display: none; touch-action: none; 
-    }
-</style>
+        #menu { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        .logo { position: relative; margin-bottom: 40px; }
+        h1 { font-size: 60px; margin: 0; letter-spacing: 5px; background: linear-gradient(#fff, var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 10px rgba(214,154,60,0.3)); }
+        .badge { position: absolute; top: 0; left: -40px; font-size: 12px; border: 1px solid var(--gold); padding: 2px 6px; transform: rotate(-15deg); color: var(--gold); }
+        
+        input { width: 80%; max-width: 350px; padding: 15px; margin: 10px; border-radius: 12px; border: 1px solid #332211; background: rgba(0,0,0,0.7); color: #fff; text-align: center; backdrop-filter: blur(5px); }
+        button { margin-top: 20px; padding: 15px 50px; border-radius: 30px; background: linear-gradient(var(--gold), #a67020); color: #000; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 5px 20px rgba(0,0,0,0.4); }
+        
+        #blackout { position: fixed; inset: 0; background: #000; z-index: 9; display: none; touch-action: none; }
+        /* Faint motion for the blackout mode */
+        #blackout canvas { opacity: 0.15; } 
+    </style>
 </head>
 <body>
 
+<canvas id="bgCanvas"></canvas>
+
 <div id="menu">
-    <div class="logo-container">
-        <span class="pro-badge">PRO</span>
-        <h1>VERBIX</h1>
-    </div>
+    <div class="logo"><span class="badge">PRO</span><h1>VERBIX</h1></div>
     <input id="startWord" placeholder="Trigger Start">
     <input id="endWord" placeholder="Trigger End">
-    <button id="startBtn">Start Session</button>
+    <button onclick="start()">ACTIVATE</button>
 </div>
 
-<div id="blackout"></div>
+<div id="blackout"><canvas id="blackoutCanvas"></canvas></div>
 
 <script>
-const $ = id => document.getElementById(id);
-let STARTS = [], ENDS = [], currentWord = "", listening = false;
+    const $ = id => document.getElementById(id);
+    let STARTS = [], ENDS = [], currentWord = "", listening = false;
+    const vib = (p) => navigator.vibrate?.(p);
 
-const vib = (p) => { if ("vibrate" in navigator) navigator.vibrate(p); };
-
-// Swipe Reveal Logic
-let touchStartY = 0;
-$("blackout").addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; });
-$("blackout").addEventListener('touchend', e => {
-    if (touchStartY - e.changedTouches[0].clientY > 100) {
-        if (currentWord) finalizeReveal();
-        else vib(40); // Short vibrate if no word captured yet
-    }
-});
-
-function finalizeReveal() {
-    listening = false; // Stop the auto-restart logic
-    if (recognition) recognition.stop();
-    
-    // Attempt to exit fullscreen so the browser UI appears normally
-    if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-    }
-
-    // Standard redirect - replaces the page so "Back" is clean
-    window.location.href = "https://www.google.com/search?q=" + encodeURIComponent(currentWord);
-}
-
-// Speech Recognition
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition;
-
-if (SR) {
-    recognition = new SR();
-    recognition.lang = "he-IL";
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    recognition.onresult = e => {
-        let text = Array.from(e.results).map(r => r[0].transcript).join(" ").toLowerCase();
+    // --- Background Particles Logic ---
+    function initParticles(canvasId) {
+        const canvas = $(canvasId);
+        const ctx = canvas.getContext('2d');
+        let particles = [];
         
-        // Check END Triggers (Captures word before the trigger)
-        for (let p of ENDS) {
-            if (text.includes(p)) {
-                let parts = text.split(p);
-                let seg = parts[parts.length - 2].trim().split(/\s+/);
-                let newWord = seg[seg.length - 1].replace(/[.,!?״]/g, "");
-                if (newWord && newWord !== currentWord) {
-                    currentWord = newWord;
-                    vib([150, 50, 150]); // Vibrate twice: Ready
-                }
-                return;
+        const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+        window.onresize = resize; resize();
+
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 1.5;
+                this.speedY = Math.random() * -0.5 - 0.2; // Floating upwards
+                this.opacity = Math.random() * 0.5;
+            }
+            update() {
+                this.y += this.speedY;
+                if (this.y < 0) this.reset();
+            }
+            draw() {
+                ctx.fillStyle = `rgba(214, 154, 60, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
-        // Check START Triggers (Captures word after the trigger)
-        for (let p of STARTS) {
-            if (text.includes(p)) {
-                let parts = text.split(p);
-                let seg = parts[parts.length - 1].trim().split(/\s+/);
-                let newWord = seg[0].replace(/[.,!?״]/g, "");
-                if (newWord && newWord !== currentWord) {
-                    currentWord = newWord;
-                    vib([150, 50, 150]); // Vibrate twice: Ready
-                }
-                return;
-            }
+
+        for (let i = 0; i < 50; i++) particles.push(new Particle());
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animate);
         }
+        animate();
+    }
+    initParticles('bgCanvas');
+    initParticles('blackoutCanvas');
+
+    // --- Gesture & Speech Logic ---
+    let tY = 0;
+    $("blackout").ontouchstart = e => tY = e.touches[0].clientY;
+    $("blackout").ontouchend = e => {
+        const dY = tY - e.changedTouches[0].clientY;
+        if (e.touches.length + e.changedTouches.length >= 2 && dY > 100) return location.reload();
+        if (Math.abs(dY) < 10) currentWord ? reveal() : vib(40);
     };
 
-    recognition.onend = () => { if (listening) recognition.start(); };
-    recognition.onerror = () => { if (listening) try { recognition.start(); } catch(e) {} };
-}
+    function reveal() {
+        listening = false;
+        recognition?.stop();
+        window.location.href = `https://www.google.com/search?q=${encodeURIComponent(currentWord)}`;
+    }
 
-$("startBtn").onclick = async () => {
-    STARTS = $("startWord").value.split(",").map(s => s.trim().toLowerCase()).filter(x => x);
-    ENDS = $("endWord").value.split(",").map(s => s.trim().toLowerCase()).filter(x => x);
-    
-    localStorage.setItem("verbix_start", $("startWord").value);
-    localStorage.setItem("verbix_end", $("endWord").value);
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = SR ? new SR() : null;
+    if (recognition) {
+        recognition.lang = "he-IL"; recognition.continuous = true; recognition.interimResults = true;
+        recognition.onresult = e => {
+            const text = Array.from(e.results).map(r => r[0].transcript).join(" ").toLowerCase();
+            [...ENDS.map(p => ({p, type:'end'})), ...STARTS.map(p => ({p, type:'start'}))].forEach(t => {
+                if (text.includes(t.p)) {
+                    const parts = text.split(t.p);
+                    const raw = t.type === 'end' ? parts[parts.length-2] : parts[parts.length-1];
+                    const word = raw?.trim().split(/\s+/).pop()?.replace(/[.,!?״]/g, "");
+                    if (word && word !== currentWord) { currentWord = word; vib([150, 50, 150]); }
+                }
+            });
+        };
+        recognition.onend = () => listening && recognition.start();
+    }
 
-    $("menu").style.display = "none";
-    $("blackout").style.display = "block";
-    
-    listening = true;
-    recognition.start();
-    vib(100);
-    try { await document.documentElement.requestFullscreen(); } catch(e) {}
-};
+    async function start() {
+        STARTS = $("startWord").value.split(",").map(s => s.trim().toLowerCase()).filter(x => x);
+        ENDS = $("endWord").value.split(",").map(s => s.trim().toLowerCase()).filter(x => x);
+        localStorage.setItem("v_start", $("startWord").value);
+        localStorage.setItem("v_end", $("endWord").value);
+        $("menu").style.display = "none";
+        $("blackout").style.display = "block";
+        listening = true;
+        recognition?.start();
+        vib(100);
+        document.documentElement.requestFullscreen().catch(n=>n);
+    }
 
-$("startWord").value = localStorage.getItem("verbix_start") || "";
-$("endWord").value = localStorage.getItem("verbix_end") || "";
+    $("startWord").value = localStorage.getItem("v_start") || "";
+    $("endWord").value = localStorage.getItem("v_end") || "";
 </script>
 </body>
 </html>
