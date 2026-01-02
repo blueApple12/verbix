@@ -5,88 +5,160 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verbix PRO</title>
     <style>
-        :root { --gold: #d69a3c; }
-        body { 
-            margin: 0; height: 100vh; overflow: hidden; text-align: center;
-            background: linear-gradient(45deg, #050301, #1a0f08, #2b1a0a, #050301);
-            background-size: 400% 400%;
-            animation: flow 15s ease infinite;
-            color: #ffdca8; font-family: system-ui, sans-serif;
-        }
-        @keyframes flow { 0% {background-position: 0% 50%} 50% {background-position: 100% 50%} 100% {background-position: 0% 50%} }
-
-        #menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        h1 { font-size: 60px; margin: 0; letter-spacing: 5px; background: linear-gradient(#fff, var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 15px rgba(214,154,60,0.5)); }
+        :root { --gold: #d69a3c; --bg: #050301; }
+        body { margin: 0; background: var(--bg); color: #ffdca8; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; }
         
-        input { width: 80%; max-width: 350px; padding: 15px; margin: 10px; border-radius: 12px; border: 1px solid var(--gold); background: rgba(0,0,0,0.6); color: #fff; text-align: center; font-size: 18px; }
-        button { margin-top: 20px; padding: 15px 60px; border-radius: 30px; background: var(--gold); color: #000; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 0 20px rgba(214,154,60,0.4); }
+        canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+        #menu { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        
+        .logo-wrap { position: relative; margin-bottom: 40px; }
+        h1 { font-size: 60px; margin: 0; letter-spacing: 5px; background: linear-gradient(#fff, var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 10px rgba(214,154,60,0.5)); }
+        .pro-tag { position: absolute; top: -5px; left: -45px; font-size: 12px; border: 1px solid var(--gold); padding: 2px 6px; color: var(--gold); transform: rotate(-15deg); font-weight: bold; background: rgba(0,0,0,0.6); }
+
+        input { width: 85%; max-width: 380px; padding: 16px; margin: 10px; border-radius: 12px; border: 1px solid #444; background: rgba(0,0,0,0.7); color: #fff; text-align: center; font-size: 18px; backdrop-filter: blur(5px); }
+        button { margin-top: 30px; padding: 18px 70px; border-radius: 40px; background: var(--gold); color: #000; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 0 25px rgba(214,154,60,0.4); font-size: 20px; }
         
         #blackout { position: fixed; inset: 0; background: #000; z-index: 9; display: none; touch-action: none; }
-        /* Very faint glow for the blackout so you know it's on */
-        #blackout::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1a0f08 0%, #000 70%); opacity: 0.6; }
     </style>
 </head>
 <body>
 
+<canvas id="canvas"></canvas>
+
 <div id="menu">
-    <h1 style="position:relative"><span style="position:absolute; top:-10px; left:-40px; font-size:12px; border:1px solid var(--gold); padding:2px 5px; color:var(--gold); transform:rotate(-15deg)">PRO</span>VERBIX</h1>
-    <input id="startWord" placeholder="Trigger Start">
-    <input id="endWord" placeholder="Trigger End">
-    <button onclick="start()">START</button>
+    <div class="logo-wrap">
+        <span class="pro-tag">PRO</span>
+        <h1>VERBIX</h1>
+    </div>
+    <input id="startWord" placeholder="מילות התחלה (מופרדות בפסיק)">
+    <input id="endWord" placeholder="מילות סיום (מופרדות בפסיק)">
+    <button id="startBtn">ACTIVATE</button>
 </div>
+
 <div id="blackout"></div>
 
 <script>
-    const $ = id => document.getElementById(id);
-    let STARTS = [], ENDS = [], currentWord = "", listening = false;
-    const vib = (p) => navigator.vibrate?.(p);
+/* ===================== DOM & GLOBALS ===================== */
+const $ = id => document.getElementById(id);
+const canvas = $("canvas"), ctx = canvas.getContext("2d");
+const menu = $("menu"), blackout = $("blackout");
+const startInp = $("startWord"), endInp = $("endWord"), startBtn = $("startBtn");
+const vib = p => navigator.vibrate?.(p);
 
-    // Gestures
-    let tY = 0;
-    $("blackout").ontouchstart = e => tY = e.touches[0].clientY;
-    $("blackout").ontouchend = e => {
-        const dY = tY - e.changedTouches[0].clientY;
-        if (e.touches.length + e.changedTouches.length >= 2 && dY > 100) return location.reload();
-        if (Math.abs(dY) < 15) currentWord ? reveal() : vib(40);
+/* ===================== CANVAS PARTICLES ===================== */
+let W, H;
+function resize(){ W=canvas.width=innerWidth; H=canvas.height=innerHeight; }
+window.onresize = resize; resize();
+
+class Particle {
+    constructor(){ this.reset(); }
+    reset(){
+        this.x=Math.random()*W; this.y=Math.random()*H;
+        this.r=Math.random()*2+1; this.v=Math.random()*0.5+0.2; this.o=Math.random();
+    }
+    draw(){
+        this.y-=this.v; this.o-=0.002;
+        if(this.y<0||this.o<=0) this.reset();
+        ctx.fillStyle=`rgba(214,154,60,${this.o})`;
+        ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,6.28); ctx.fill();
+    }
+}
+const particles=[...Array(60)].map(()=>new Particle());
+(function anim(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach(p=>p.draw());
+    requestAnimationFrame(anim);
+})();
+
+/* ===================== TRIE PATTERN MATCHING ===================== */
+class TrieNode { constructor(){ this.c={}; this.end=false; } }
+class Trie {
+    constructor(){ this.root=new TrieNode(); }
+    add(word){
+        let n=this.root;
+        for(const ch of word){
+            if(!n.c[ch]) n.c[ch]=new TrieNode();
+            n=n.c[ch];
+        }
+        n.end=true;
+    }
+    match(text, cb){
+        for(let i=0;i<text.length;i++){
+            let n=this.root, j=i;
+            while(n && n.c[text[j]]){
+                n=n.c[text[j]];
+                if(n.end) cb(i,j+1);
+                j++;
+            }
+        }
+    }
+}
+
+/* ===================== SPEECH RECOGNITION ===================== */
+let startTrie, endTrie, currentWord="", listening=false, lastFire=0;
+const DEBOUNCE_MS = 700, MIN_CHARS = 4;
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = SR ? new SR() : null;
+
+if(recognition){
+    recognition.lang="he-IL"; recognition.continuous=true; recognition.interimResults=true;
+    recognition.onresult=e=>{
+        const now=Date.now();
+        const text=[...e.results].map(r=>r[0].transcript).join(" ").toLowerCase().trim();
+        if(text.length < MIN_CHARS || now - lastFire < DEBOUNCE_MS) return;
+
+        startTrie?.match(text,(s,e)=>{ extract(text.slice(e)); lastFire=now; });
+        endTrie?.match(text,(s,e)=>{ extract(text.slice(0,s)); lastFire=now; });
     };
+    recognition.onend=()=>listening&&recognition.start();
+}
 
-    function reveal() {
-        listening = false; recognition?.stop();
-        window.location.href = `https://www.google.com/search?q=${encodeURIComponent(currentWord)}`;
+function extract(str){
+    const w=str.trim().split(/\s+/).pop()?.replace(/[.,!?״]/g,"");
+    if(w && w!==currentWord){
+        currentWord=w;
+        vib([150,50,150]);
     }
+}
 
-    // Speech Engine
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = SR ? new SR() : null;
-    if (recognition) {
-        recognition.lang = "he-IL"; recognition.continuous = true; recognition.interimResults = true;
-        recognition.onresult = e => {
-            const text = Array.from(e.results).map(r => r[0].transcript).join(" ").toLowerCase();
-            [...ENDS.map(p=>({p,t:'e'})), ...STARTS.map(p=>({p,t:'s'}))].forEach(trig => {
-                if (text.includes(trig.p)) {
-                    const parts = text.split(trig.p);
-                    const raw = trig.t === 'e' ? parts[parts.length-2] : parts[parts.length-1];
-                    const word = raw?.trim().split(/\s+/).pop()?.replace(/[.,!?״]/g, "");
-                    if (word && word !== currentWord) { currentWord = word; vib([150, 50, 150]); }
-                }
-            });
-        };
-        recognition.onend = () => listening && recognition.start();
-    }
+/* ===================== GESTURES ===================== */
+let startY=0;
+blackout.ontouchstart=e=>{ if(e.touches.length===1) startY=e.touches[0].clientY; };
+blackout.ontouchend=e=>{
+    const dy=startY-e.changedTouches[0].clientY;
+    // Two-finger swipe up to reset
+    if(e.changedTouches.length>0 && e.touches.length >= 1 && dy>100) location.reload();
+    // Tap to reveal
+    else if(Math.abs(dy)<15) currentWord ? reveal() : vib(40);
+};
 
-    async function start() {
-        STARTS = $("startWord").value.split(",").map(s => s.trim().toLowerCase()).filter(x => x);
-        ENDS = $("endWord").value.split(",").map(s => s.trim().toLowerCase()).filter(x => x);
-        localStorage.setItem("v_start", $("startWord").value);
-        localStorage.setItem("v_end", $("endWord").value);
-        $("menu").style.display = "none";
-        $("blackout").style.display = "block";
-        listening = true; recognition?.start(); vib(100);
-        document.documentElement.requestFullscreen().catch(e=>e);
-    }
+function reveal(){
+    listening=false; recognition?.stop();
+    location.href=`https://www.google.com/search?q=${encodeURIComponent(currentWord)}`;
+}
 
-    $("startWord").value = localStorage.getItem("v_start") || "";
-    $("endWord").value = localStorage.getItem("v_end") || "";
+function start(){
+    startTrie=new Trie(); endTrie=new Trie();
+    startInp.value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean).forEach(p=>startTrie.add(p));
+    endInp.value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean).forEach(p=>endTrie.add(p));
+
+    localStorage.v_start=startInp.value;
+    localStorage.v_end=endInp.value;
+
+    menu.style.display="none";
+    blackout.style.display="block";
+    blackout.appendChild(canvas);
+
+    listening=true; recognition?.start(); vib(100);
+    document.documentElement.requestFullscreen().catch(()=>{});
+}
+
+/* ===================== INIT ===================== */
+startInp.value=localStorage.v_start||"";
+endInp.value=localStorage.v_end||"";
+startBtn.onclick=start;
 </script>
 </body>
 </html>
