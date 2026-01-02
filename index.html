@@ -7,7 +7,6 @@
 <style>
     :root {
         --gold: #d69a3c;
-        --gold-glow: #ffbf66;
         --bg: #0a0502;
     }
 
@@ -15,13 +14,12 @@
         margin: 0; padding: 0; 
         background: radial-gradient(circle at center, #1a0f08 0%, var(--bg) 100%);
         color: #ffdca8; 
-        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+        font-family: 'Segoe UI', sans-serif; 
         text-align: center; 
         overflow: hidden; 
         height: 100vh;
     }
 
-    /* Container for layout */
     #menu { 
         display: flex; 
         flex-direction: column; 
@@ -29,114 +27,37 @@
         justify-content: center; 
         height: 100vh; 
         padding: 0 30px;
-        transition: opacity 0.5s ease;
     }
 
-    /* Logo Design */
-    .logo-container {
-        margin-bottom: 40px;
-        position: relative;
-    }
+    .logo-container { margin-bottom: 40px; position: relative; }
 
     h1 { 
-        font-size: 62px; 
-        margin: 0; 
-        letter-spacing: 8px; 
-        text-transform: uppercase;
-        font-weight: 900;
+        font-size: 62px; margin: 0; letter-spacing: 8px; text-transform: uppercase; font-weight: 900;
         background: linear-gradient(180deg, #fff 30%, var(--gold) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        filter: drop-shadow(0 0 15px rgba(214, 154, 60, 0.4));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
 
     .pro-badge {
-        position: absolute;
-        top: 10px;
-        left: -45px;
-        font-size: 14px;
-        letter-spacing: 2px;
-        color: var(--gold);
-        border: 1px solid var(--gold);
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-weight: bold;
-        transform: rotate(-10deg);
-        box-shadow: 0 0 10px rgba(214, 154, 60, 0.2);
-    }
-
-    /* Inputs */
-    .input-group {
-        width: 100%;
-        max-width: 400px;
-        margin-bottom: 20px;
+        position: absolute; top: 10px; left: -45px; font-size: 14px; letter-spacing: 2px;
+        color: var(--gold); border: 1px solid var(--gold); padding: 2px 8px;
+        border-radius: 4px; font-weight: bold; transform: rotate(-10deg);
     }
 
     input { 
-        width: 100%;
-        padding: 16px; 
-        margin: 10px 0;
-        border-radius: 12px; 
-        border: 1px solid rgba(214, 154, 60, 0.3); 
-        font-size: 18px; 
-        background: rgba(20, 10, 5, 0.8); 
-        color: #fff; 
-        outline: none;
-        transition: all 0.3s ease;
-        text-align: center;
-        box-sizing: border-box;
+        width: 100%; max-width: 400px; padding: 16px; margin: 10px 0;
+        border-radius: 12px; border: 1px solid rgba(214, 154, 60, 0.3); 
+        font-size: 18px; background: rgba(20, 10, 5, 0.8); color: #fff; text-align: center;
     }
 
-    input:focus {
-        border-color: var(--gold);
-        box-shadow: 0 0 15px rgba(214, 154, 60, 0.2);
-        background: rgba(30, 15, 8, 1);
-    }
-
-    /* Button */
     button { 
-        margin-top: 30px; 
-        padding: 18px 60px; 
-        font-size: 22px; 
-        border-radius: 50px; 
+        margin-top: 30px; padding: 18px 60px; font-size: 22px; border-radius: 50px; 
         background: linear-gradient(135deg, #ffda8b 0%, var(--gold) 100%); 
-        color: #2b1407; 
-        font-weight: 800; 
-        cursor: pointer; 
-        border: none; 
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(214, 154, 60, 0.3);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        color: #2b1407; font-weight: 800; cursor: pointer; border: none; 
     }
 
-    button:active {
-        transform: scale(0.96);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    }
-
-    /* The Layers */
     #blackout { 
-        position: fixed; inset: 0; 
-        background: #000; 
-        z-index: 9999; 
-        display: none; 
-        touch-action: none; 
-    }
-
-    #searchFrame { 
-        position: fixed; inset: 0; 
-        width: 100%; height: 100%; 
-        border: none; 
-        display: none; 
-        z-index: 9998; 
-    }
-
-    /* Subtle hint for the mentalist */
-    .active-indicator {
-        position: fixed; bottom: 10px; right: 10px;
-        width: 4px; height: 4px; border-radius: 50%;
-        background: rgba(255,255,255,0.05); z-index: 10000;
+        position: fixed; inset: 0; background: #000; z-index: 9999; 
+        display: none; touch-action: none; 
     }
 </style>
 </head>
@@ -147,18 +68,12 @@
         <span class="pro-badge">PRO</span>
         <h1>VERBIX</h1>
     </div>
-
-    <div class="input-group">
-        <input id="startWord" placeholder="מילת התחלה (לדוגמה: המילה היא)">
-        <input id="endWord" placeholder="מילת סיום (לדוגמה: בחירה חופשית)">
-    </div>
-
+    <input id="startWord" placeholder="מילת התחלה (לדוגמה: המילה היא)">
+    <input id="endWord" placeholder="מילת סיום (לדוגמה: בחירה חופשית)">
     <button id="startBtn">הפעל סשן</button>
 </div>
 
-<iframe id="searchFrame"></iframe>
 <div id="blackout"></div>
-<div class="active-indicator" id="dot"></div>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -166,30 +81,29 @@ let STARTS = [], ENDS = [], currentWord = "", listening = false;
 
 const vib = (p) => { if ("vibrate" in navigator) navigator.vibrate(p); };
 
-// Wake Lock to keep screen alive
-let wakeLock = null;
-const requestWakeLock = async () => {
-    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
-};
-
-// UI Interactions
-let touchStartY = 0, lastTap = 0, tapCount = 0;
-$("blackout").addEventListener('touchstart', e => { 
-    touchStartY = e.touches[0].clientY; 
-    const now = Date.now();
-    if (now - lastTap < 400) tapCount++; else tapCount = 1;
-    lastTap = now;
-    if (tapCount === 3) location.reload(); // Triple tap reset
-});
-
+// Swipe Reveal Logic
+let touchStartY = 0;
+$("blackout").addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; });
 $("blackout").addEventListener('touchend', e => {
-    if (touchStartY - e.changedTouches[0].clientY > 100) revealSearch();
+    if (touchStartY - e.changedTouches[0].clientY > 100) {
+        if (currentWord) finalizeReveal();
+        else vib(40);
+    }
 });
 
-function revealSearch() {
-    if (!currentWord) { vib(40); return; }
-    $("blackout").style.display = "none";
-    $("searchFrame").style.display = "block";
+function finalizeReveal() {
+    listening = false;
+    if (recognition) recognition.stop();
+    
+    // Exit Fullscreen
+    if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+    }
+
+    // Redirect immediately (no iframe)
+    setTimeout(() => {
+        location.replace("https://www.google.com/search?q=" + encodeURIComponent(currentWord));
+    }, 100);
 }
 
 // Speech Recognition
@@ -204,46 +118,31 @@ if (SR) {
 
     recognition.onresult = e => {
         let text = Array.from(e.results).map(r => r[0].transcript).join(" ").toLowerCase();
-        processSpeech(text);
+        
+        // Check END Triggers
+        for (let p of ENDS) {
+            if (text.includes(p)) {
+                let seg = text.split(p)[text.split(p).length - 2].trim().split(/\s+/);
+                currentWord = seg[seg.length - 1].replace(/[.,!?״]/g, "");
+                if (currentWord) vib([150, 50, 150]);
+                return;
+            }
+        }
+        // Check START Triggers
+        for (let p of STARTS) {
+            if (text.includes(p)) {
+                let seg = text.split(p)[1].trim().split(/\s+/);
+                currentWord = seg[0].replace(/[.,!?״]/g, "");
+                if (currentWord) vib([150, 50, 150]);
+                return;
+            }
+        }
     };
 
     recognition.onend = () => { if (listening) recognition.start(); };
     recognition.onerror = () => { if (listening) try { recognition.start(); } catch(e) {} };
 }
 
-function processSpeech(text) {
-    for (let p of ENDS) {
-        if (text.includes(p)) {
-            let parts = text.split(p);
-            let seg = parts[parts.length - 2].trim().split(/\s+/);
-            updateWord(seg[seg.length - 1]);
-            return;
-        }
-    }
-    for (let p of STARTS) {
-        if (text.includes(p)) {
-            let parts = text.split(p);
-            let seg = parts[parts.length - 1].trim().split(/\s+/);
-            updateWord(seg[0]);
-            return;
-        }
-    }
-}
-
-function updateWord(word) {
-    word = word.replace(/[.,!?״]/g, "");
-    if (!word || word === currentWord) return;
-    currentWord = word;
-    
-    // Background Load
-    $("searchFrame").src = `https://www.google.com/search?q=${encodeURIComponent(word)}&igu=1`;
-    vib([150, 50, 150]); 
-    // Pulse dot gold for a second when captured
-    $("dot").style.background = "var(--gold)";
-    setTimeout(() => { $("dot").style.background = "rgba(255,255,255,0.05)"; }, 1000);
-}
-
-// Logic to start everything
 $("startBtn").onclick = async () => {
     STARTS = $("startWord").value.split(",").map(s => s.trim().toLowerCase()).filter(x => x);
     ENDS = $("endWord").value.split(",").map(s => s.trim().toLowerCase()).filter(x => x);
@@ -251,20 +150,15 @@ $("startBtn").onclick = async () => {
     localStorage.setItem("verbix_start", $("startWord").value);
     localStorage.setItem("verbix_end", $("endWord").value);
 
-    $("menu").style.opacity = "0";
-    setTimeout(() => {
-        $("menu").style.display = "none";
-        $("blackout").style.display = "flex";
-    }, 500);
+    $("menu").style.display = "none";
+    $("blackout").style.display = "block";
     
     listening = true;
-    requestWakeLock();
     recognition.start();
     vib(100);
     try { await document.documentElement.requestFullscreen(); } catch(e) {}
 };
 
-// Persistence
 $("startWord").value = localStorage.getItem("verbix_start") || "";
 $("endWord").value = localStorage.getItem("verbix_end") || "";
 </script>
