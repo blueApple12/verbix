@@ -63,7 +63,7 @@ const vib = p => navigator.vibrate?.(p);
 
 let state = {
     W: 0, H: 0, listening: false, currentWord: "", lastFire: 0, animating: true,
-    lastTap: 0 // For double tap detection
+    tapCount: 0, tapTimer: null
 };
 
 /* ================== CANVAS ================== */
@@ -154,31 +154,32 @@ function handleExtract(str, now) {
 
 /* ================== GESTURES ================== */
 let startY = 0;
-dom.blackout.ontouchstart = e => startY = e.touches[0].clientY;
+dom.blackout.ontouchstart = e => {
+    startY = e.touches[0].clientY;
+};
+
 dom.blackout.ontouchend = e => {
     const dy = startY - e.changedTouches[0].clientY;
-    const now = Date.now();
 
-    // Swipe Up: Secret Reset
+    // Swipe Up: Reset
     if (dy > 100) return location.reload();
 
-    // Tap Detection
-    if (Math.abs(dy) < 15) {
+    // Tap logic
+    if (Math.abs(dy) < 20) {
         if (!state.currentWord) return vib(40);
-
-        // Check for Double Tap (within 300ms)
-        if (now - state.lastTap < 300) {
-            // DOUBLE TAP REVEAL: Google Images
-            performReveal(true);
-        } else {
-            // SINGLE TAP REVEAL: Standard Search (Delay slightly to wait for second tap)
-            state.lastTap = now;
-            setTimeout(() => {
-                if (Date.now() - state.lastTap >= 300) {
-                    performReveal(false);
-                }
-            }, 305);
-        }
+        
+        state.tapCount++;
+        
+        clearTimeout(state.tapTimer);
+        
+        state.tapTimer = setTimeout(() => {
+            if (state.tapCount >= 2) {
+                performReveal(true); // Double tap = Images
+            } else {
+                performReveal(false); // Single tap = Web
+            }
+            state.tapCount = 0;
+        }, 300); // Window for double tap
     }
 };
 
@@ -188,7 +189,7 @@ function performReveal(isImage) {
     rec?.stop();
     
     let url = `https://www.google.com/search?q=${encodeURIComponent(state.currentWord)}`;
-    if (isImage) url += "&tbm=isch"; // Adds the "Images" parameter
+    if (isImage) url += "&tbm=isch";
     
     location.href = url;
 }
@@ -207,7 +208,9 @@ dom.startBtn.onclick = () => {
     state.listening = true;
     rec?.start();
     vib(100);
-    document.documentElement.requestFullscreen?.().catch(()=>{});
+    if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    }
 };
 
 /* ================== INIT ================== */
