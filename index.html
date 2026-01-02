@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verbix PRO</title>
+    <style>
+        :root { --gold: #d69a3c; --bg: #050301; }
+        body { margin: 0; background: var(--bg); color: #ffdca8; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; }
+        
+        /* Particle Layer - Only visible in menu */
+        canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+        #menu { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        
+        /* Logo Styling */
+        .logo-wrap { position: relative; margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; }
+        .main-logo { width: 150px; height: 150px; border-radius: 24px; box-shadow: 0 0 30px rgba(214, 154, 60, 0.3); border: 1px solid rgba(214, 154, 60, 0.4); margin-bottom: 10px; }
+        
+        h1 { font-size: 50px; margin: 0; letter-spacing: 5px; background: linear-gradient(#fff, var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 10px rgba(214,154,60,0.5)); }
+        .pro-tag { position: absolute; top: 10px; right: -20px; font-size: 12px; border: 1px solid var(--gold); padding: 2px 6px; color: var(--gold); transform: rotate(15deg); font-weight: bold; background: rgba(0,0,0,0.8); z-index: 2; }
+
+        input { width: 85%; max-width: 380px; padding: 16px; margin: 10px; border-radius: 12px; border: 1px solid #444; background: rgba(0,0,0,0.7); color: #fff; text-align: center; font-size: 18px; backdrop-filter: blur(5px); transition: border 0.3s; }
+        input:focus { border-color: var(--gold); outline: none; }
+        button { margin-top: 30px; padding: 18px 70px; border-radius: 40px; background: var(--gold); color: #000; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 0 25px rgba(214,154,60,0.4); font-size: 20px; text-transform: uppercase; }
+        
+        /* Pure Blackout */
+        #blackout { position: fixed; inset: 0; background: #000; z-index: 99; display: none; touch-action: none; }
+    </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="menu">
+    <div class="logo-wrap">
+        <img src="logo.jpg" alt="Verbix Logo" class="main-logo">
+        <span class="pro-tag">PRO</span>
+        <h1>VERBIX</h1>
+    </div>
+    <input id="startWord" placeholder="Start Phrase">
+    <input id="endWord" placeholder="End Phrase">
+    <button id="startBtn">ACTIVATE</button>
+</div>
+
+<div id="blackout"></div>
+
+<script>
+/* ===================== DOM & CANVAS ===================== */
+const $ = id => document.getElementById(id);
+const canvas = $("canvas"), ctx = canvas.getContext("2d");
+const menu = $("menu"), blackout = $("blackout");
+const startInp = $("startWord"), endInp = $("endWord"), startBtn = $("startBtn");
+const vib = p => navigator.vibrate?.(p);
+
+let W, H;
+function resize(){ W=canvas.width=innerWidth; H=canvas.height=innerHeight; }
+window.onresize = resize; resize();
+
+class Particle {
+    constructor(){ this.reset(); }
+    reset(){
+        this.x=Math.random()*W; this.y=Math.random()*H;
+        this.r=Math.random()*2+1; this.v=Math.random()*0.4+0.1; this.o=Math.random();
+    }
+    draw(){
+        this.y-=this.v; this.o-=0.002;
+        if(this.y<0||this.o<=0) this.reset();
+        ctx.fillStyle=`rgba(214,154,60,${this.o})`;
+        ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,6.28); ctx.fill();
+    }
+}
+const particles=[...Array(60)].map(()=>new Particle());
+(function anim(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach(p=>p.draw());
+    requestAnimationFrame(anim);
+})();
+
+/* ===================== TRIE LOGIC ===================== */
+class TrieNode { constructor(){ this.c={}; this.end=false; } }
+class Trie {
+    constructor(){ this.root=new TrieNode(); }
+    add(word){
+        let n=this.root;
+        for(const ch of word){ if(!n.c[ch]) n.c[ch]=new TrieNode(); n=n.c[ch]; }
+        n.end=true;
+    }
+    match(text, cb){
+        for(let i=0;i<text.length;i++){
+            let n=this.root, j=i;
+            while(n && n.c[text[j]]){ n=n.c[text[j]]; if(n.end) cb(i,j+1); j++; }
+        }
+    }
+}
+
+/* ===================== SPEECH & REVEAL ===================== */
+let startTrie, endTrie, currentWord="", listening=false, lastFire=0;
+const DEBOUNCE_MS = 700, MIN_CHARS = 4;
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = SR ? new SR() : null;
+
+if(recognition){
+    recognition.lang="he-IL"; recognition.continuous=true; recognition.interimResults=true;
+    recognition.onresult=e=>{
+        const now=Date.now();
+        const text=[...e.results].map(r=>r[0].transcript).join(" ").toLowerCase().trim();
+        if(text.length < MIN_CHARS || now - lastFire < DEBOUNCE_MS) return;
+
+        startTrie?.match(text,(s,e)=>{ extract(text.slice(e)); lastFire=now; });
+        endTrie?.match(text,(s,e)=>{ extract(text.slice(0,s)); lastFire=now; });
+    };
+    recognition.onend=()=>listening&&recognition.start();
+}
+
+function extract(str){
+    const w=str.trim().split(/\s+/).pop()?.replace(/[.,!?״]/g,"");
+    if(w && w!==currentWord){ currentWord=w; vib([150,50,150]); }
+}
+
+/* ===================== GESTURES ===================== */
+let startY=0;
+blackout.ontouchstart=e=>{ if(e.touches.length===1) startY=e.touches[0].clientY; };
+blackout.ontouchend=e=>{
+    const dy=startY-e.changedTouches[0].clientY;
+    if(e.changedTouches.length>0 && e.touches.length >= 1 && dy>100) location.reload();
+    else if(Math.abs(dy)<15) currentWord ? reveal() : vib(40);
+};
+
+function reveal(){
+    listening=false; recognition?.stop();
+    location.href=`https://www.google.com/search?q=${encodeURIComponent(currentWord)}`;
+}
+
+function start(){
+    startTrie=new Trie(); endTrie=new Trie();
+    startInp.value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean).forEach(p=>startTrie.add(p));
+    endInp.value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean).forEach(p=>endTrie.add(p));
+
+    localStorage.v_start=startInp.value;
+    localStorage.v_end=endInp.value;
+
+    menu.style.display="none";
+    blackout.style.display="block";
+
+    listening=true; recognition?.start(); vib(100);
+    document.documentElement.requestFullscreen().catch(()=>{});
+}
+
+/* ===================== INIT ===================== */
+startInp.value=localStorage.v_start||"";
+endInp.value=localStorage.v_end||"";
+startBtn.onclick=start;
+</script>
+</body>
+</html>
