@@ -5,142 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verbix PRO</title>
     <style>
-        :root { --gold: #d69a3c; --bg: #050301; }
+        :root { --gold: #d69a3c; }
         body { 
-            margin: 0; background: var(--bg); color: #ffdca8; 
-            font-family: system-ui, -apple-system, sans-serif; overflow: hidden; height: 100vh;
+            margin: 0; height: 100vh; overflow: hidden; text-align: center;
+            background: linear-gradient(45deg, #050301, #1a0f08, #2b1a0a, #050301);
+            background-size: 400% 400%;
+            animation: flow 15s ease infinite;
+            color: #ffdca8; font-family: system-ui, sans-serif;
         }
-        
-        canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+        @keyframes flow { 0% {background-position: 0% 50%} 50% {background-position: 100% 50%} 100% {background-position: 0% 50%} }
 
-        #menu { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        .logo { position: relative; margin-bottom: 50px; }
-        h1 { 
-            font-size: 65px; margin: 0; letter-spacing: 6px; 
-            background: linear-gradient(180deg, #fff 20%, var(--gold) 100%); 
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
-            filter: drop-shadow(0 0 20px rgba(214,154,60,0.5)); 
-        }
-        .badge { position: absolute; top: -5px; left: -45px; font-size: 13px; border: 1px solid var(--gold); padding: 3px 8px; transform: rotate(-12deg); color: var(--gold); font-weight: bold; background: rgba(0,0,0,0.5); }
+        #menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        h1 { font-size: 60px; margin: 0; letter-spacing: 5px; background: linear-gradient(#fff, var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 15px rgba(214,154,60,0.5)); }
         
-        input { 
-            width: 85%; max-width: 380px; padding: 18px; margin: 12px; border-radius: 15px; 
-            border: 1px solid rgba(214, 154, 60, 0.4); background: rgba(15,10,5,0.8); 
-            color: #fff; text-align: center; backdrop-filter: blur(8px); font-size: 18px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        button { 
-            margin-top: 35px; padding: 18px 65px; border-radius: 40px; 
-            background: linear-gradient(145deg, #ffda8b, var(--gold)); 
-            color: #1a0f08; font-weight: 900; border: none; cursor: pointer; 
-            box-shadow: 0 8px 25px rgba(214,154,60,0.4); text-transform: uppercase; letter-spacing: 2px;
-        }
+        input { width: 80%; max-width: 350px; padding: 15px; margin: 10px; border-radius: 12px; border: 1px solid var(--gold); background: rgba(0,0,0,0.6); color: #fff; text-align: center; font-size: 18px; }
+        button { margin-top: 20px; padding: 15px 60px; border-radius: 30px; background: var(--gold); color: #000; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 0 20px rgba(214,154,60,0.4); }
         
         #blackout { position: fixed; inset: 0; background: #000; z-index: 9; display: none; touch-action: none; }
-        /* Visible but subtle motion for blackout */
-        #blackout canvas { opacity: 0.4; filter: blur(1px); } 
+        /* Very faint glow for the blackout so you know it's on */
+        #blackout::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1a0f08 0%, #000 70%); opacity: 0.6; }
     </style>
 </head>
 <body>
 
-<canvas id="bgCanvas"></canvas>
-
 <div id="menu">
-    <div class="logo"><span class="badge">PRO</span><h1>VERBIX</h1></div>
-    <input id="startWord" placeholder="Trigger Start Phrase">
-    <input id="endWord" placeholder="Trigger End Phrase">
-    <button onclick="start()">ACTIVATE</button>
+    <h1 style="position:relative"><span style="position:absolute; top:-10px; left:-40px; font-size:12px; border:1px solid var(--gold); padding:2px 5px; color:var(--gold); transform:rotate(-15deg)">PRO</span>VERBIX</h1>
+    <input id="startWord" placeholder="Trigger Start">
+    <input id="endWord" placeholder="Trigger End">
+    <button onclick="start()">START</button>
 </div>
-
-<div id="blackout"><canvas id="blackoutCanvas"></canvas></div>
+<div id="blackout"></div>
 
 <script>
     const $ = id => document.getElementById(id);
     let STARTS = [], ENDS = [], currentWord = "", listening = false;
     const vib = (p) => navigator.vibrate?.(p);
 
-    // --- Enhanced Particle System ---
-    function initParticles(canvasId) {
-        const canvas = $(canvasId);
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-        
-        const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-        window.onresize = resize; resize();
-
-        class Particle {
-            constructor() { this.reset(); }
-            reset() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height + canvas.height; // Start below
-                this.size = Math.random() * 2.5 + 0.5;
-                this.speedY = Math.random() * -0.8 - 0.3; 
-                this.speedX = Math.random() * 0.4 - 0.2;
-                this.opacity = Math.random() * 0.7 + 0.2;
-                this.shimmer = Math.random() * 0.05;
-            }
-            update() {
-                this.y += this.speedY;
-                this.x += this.speedX;
-                this.opacity -= this.shimmer;
-                if (this.y < -10 || this.opacity <= 0) this.reset();
-            }
-            draw() {
-                ctx.fillStyle = `rgba(230, 170, 80, ${this.opacity})`;
-                ctx.shadowBlur = 5;
-                ctx.shadowColor = "rgba(214, 154, 60, 0.5)";
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0; // Reset for performance
-            }
-        }
-
-        for (let i = 0; i < 60; i++) particles.push(new Particle());
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => { p.update(); p.draw(); });
-            requestAnimationFrame(animate);
-        }
-        animate();
-    }
-    
-    initParticles('bgCanvas');
-    initParticles('blackoutCanvas');
-
-    // --- Logic & Gestures ---
+    // Gestures
     let tY = 0;
     $("blackout").ontouchstart = e => tY = e.touches[0].clientY;
     $("blackout").ontouchend = e => {
         const dY = tY - e.changedTouches[0].clientY;
-        const isTwoFingers = e.touches.length + e.changedTouches.length >= 2;
-        
-        if (isTwoFingers && dY > 100) return location.reload();
+        if (e.touches.length + e.changedTouches.length >= 2 && dY > 100) return location.reload();
         if (Math.abs(dY) < 15) currentWord ? reveal() : vib(40);
     };
 
     function reveal() {
-        listening = false;
-        recognition?.stop();
-        if (document.fullscreenElement) document.exitFullscreen().catch(e=>e);
+        listening = false; recognition?.stop();
         window.location.href = `https://www.google.com/search?q=${encodeURIComponent(currentWord)}`;
     }
 
+    // Speech Engine
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = SR ? new SR() : null;
     if (recognition) {
         recognition.lang = "he-IL"; recognition.continuous = true; recognition.interimResults = true;
         recognition.onresult = e => {
             const text = Array.from(e.results).map(r => r[0].transcript).join(" ").toLowerCase();
-            [...ENDS.map(p => ({p, type:'end'})), ...STARTS.map(p => ({p, type:'start'}))].forEach(t => {
-                if (text.includes(t.p)) {
-                    const parts = text.split(t.p);
-                    const raw = t.type === 'end' ? parts[parts.length-2] : parts[parts.length-1];
+            [...ENDS.map(p=>({p,t:'e'})), ...STARTS.map(p=>({p,t:'s'}))].forEach(trig => {
+                if (text.includes(trig.p)) {
+                    const parts = text.split(trig.p);
+                    const raw = trig.t === 'e' ? parts[parts.length-2] : parts[parts.length-1];
                     const word = raw?.trim().split(/\s+/).pop()?.replace(/[.,!?״]/g, "");
-                    if (word && word !== currentWord) { 
-                        currentWord = word; 
-                        vib([150, 50, 150]); 
-                    }
+                    if (word && word !== currentWord) { currentWord = word; vib([150, 50, 150]); }
                 }
             });
         };
@@ -154,9 +81,7 @@
         localStorage.setItem("v_end", $("endWord").value);
         $("menu").style.display = "none";
         $("blackout").style.display = "block";
-        listening = true;
-        recognition?.start();
-        vib(100);
+        listening = true; recognition?.start(); vib(100);
         document.documentElement.requestFullscreen().catch(e=>e);
     }
 
