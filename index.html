@@ -68,9 +68,9 @@
         <span class="pro-badge">PRO</span>
         <h1>VERBIX</h1>
     </div>
-    <input id="startWord" placeholder="Start Phase Trigger">
-    <input id="endWord" placeholder="End Phase Trigger">
-    <button id="startBtn">Start</button>
+    <input id="startWord" placeholder="Trigger Start">
+    <input id="endWord" placeholder="Trigger End">
+    <button id="startBtn">Start Session</button>
 </div>
 
 <div id="blackout"></div>
@@ -87,23 +87,21 @@ $("blackout").addEventListener('touchstart', e => { touchStartY = e.touches[0].c
 $("blackout").addEventListener('touchend', e => {
     if (touchStartY - e.changedTouches[0].clientY > 100) {
         if (currentWord) finalizeReveal();
-        else vib(40);
+        else vib(40); // Short vibrate if no word captured yet
     }
 });
 
 function finalizeReveal() {
-    listening = false;
+    listening = false; // Stop the auto-restart logic
     if (recognition) recognition.stop();
     
-    // Exit Fullscreen
+    // Attempt to exit fullscreen so the browser UI appears normally
     if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
     }
 
-    // Redirect immediately (no iframe)
-    setTimeout(() => {
-        location.replace("https://www.google.com/search?q=" + encodeURIComponent(currentWord));
-    }, 100);
+    // Standard redirect - replaces the page so "Back" is clean
+    window.location.href = "https://www.google.com/search?q=" + encodeURIComponent(currentWord);
 }
 
 // Speech Recognition
@@ -119,21 +117,29 @@ if (SR) {
     recognition.onresult = e => {
         let text = Array.from(e.results).map(r => r[0].transcript).join(" ").toLowerCase();
         
-        // Check END Triggers
+        // Check END Triggers (Captures word before the trigger)
         for (let p of ENDS) {
             if (text.includes(p)) {
-                let seg = text.split(p)[text.split(p).length - 2].trim().split(/\s+/);
-                currentWord = seg[seg.length - 1].replace(/[.,!?״]/g, "");
-                if (currentWord) vib([150, 50, 150]);
+                let parts = text.split(p);
+                let seg = parts[parts.length - 2].trim().split(/\s+/);
+                let newWord = seg[seg.length - 1].replace(/[.,!?״]/g, "");
+                if (newWord && newWord !== currentWord) {
+                    currentWord = newWord;
+                    vib([150, 50, 150]); // Vibrate twice: Ready
+                }
                 return;
             }
         }
-        // Check START Triggers
+        // Check START Triggers (Captures word after the trigger)
         for (let p of STARTS) {
             if (text.includes(p)) {
-                let seg = text.split(p)[1].trim().split(/\s+/);
-                currentWord = seg[0].replace(/[.,!?״]/g, "");
-                if (currentWord) vib([150, 50, 150]);
+                let parts = text.split(p);
+                let seg = parts[parts.length - 1].trim().split(/\s+/);
+                let newWord = seg[0].replace(/[.,!?״]/g, "");
+                if (newWord && newWord !== currentWord) {
+                    currentWord = newWord;
+                    vib([150, 50, 150]); // Vibrate twice: Ready
+                }
                 return;
             }
         }
