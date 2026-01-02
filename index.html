@@ -2,29 +2,89 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Verbix PRO</title>
+    
+    <link rel="icon" type="image/jpeg" href="logo.jpg">
+    <link rel="apple-touch-icon" href="logo.jpg">
+
     <style>
-        :root { --gold: #d69a3c; --bg: #050301; }
+        :root { --gold: #d69a3c; --deep-orange: #a35d14; --bg: #050301; }
         body { margin: 0; background: var(--bg); color: #ffdca8; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; }
         
-        /* Particle Layer - Only visible in menu */
         canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 
         #menu { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
         
-        /* Logo Styling */
-        .logo-wrap { position: relative; margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; }
-        .main-logo { width: 150px; height: 150px; border-radius: 24px; box-shadow: 0 0 30px rgba(214, 154, 60, 0.3); border: 1px solid rgba(214, 154, 60, 0.4); margin-bottom: 10px; }
-        
-        h1 { font-size: 50px; margin: 0; letter-spacing: 5px; background: linear-gradient(#fff, var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 10px rgba(214,154,60,0.5)); }
-        .pro-tag { position: absolute; top: 10px; right: -20px; font-size: 12px; border: 1px solid var(--gold); padding: 2px 6px; color: var(--gold); transform: rotate(15deg); font-weight: bold; background: rgba(0,0,0,0.8); z-index: 2; }
+        /* The Logo Text - Styled like the image */
+        .logo-wrap { position: relative; margin-bottom: 50px; cursor: default; }
+        h1 { 
+            font-size: 75px; 
+            margin: 0; 
+            letter-spacing: 2px; 
+            font-weight: 900;
+            /* Multi-stage gold gradient */
+            background: linear-gradient(to bottom, 
+                #fff 0%, 
+                #ffe0b2 20%, 
+                var(--gold) 45%, 
+                var(--deep-orange) 50%, 
+                var(--gold) 55%, 
+                #4c2b0a 100%
+            );
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            filter: drop-shadow(0 4px 15px rgba(0,0,0,0.8)) drop-shadow(0 0 2px var(--gold));
+        }
 
-        input { width: 85%; max-width: 380px; padding: 16px; margin: 10px; border-radius: 12px; border: 1px solid #444; background: rgba(0,0,0,0.7); color: #fff; text-align: center; font-size: 18px; backdrop-filter: blur(5px); transition: border 0.3s; }
-        input:focus { border-color: var(--gold); outline: none; }
-        button { margin-top: 30px; padding: 18px 70px; border-radius: 40px; background: var(--gold); color: #000; font-weight: bold; border: none; cursor: pointer; box-shadow: 0 0 25px rgba(214,154,60,0.4); font-size: 20px; text-transform: uppercase; }
+        .pro-tag { 
+            position: absolute; 
+            top: -10px; 
+            left: -40px; 
+            font-size: 14px; 
+            border: 2px solid var(--gold); 
+            padding: 3px 8px; 
+            color: var(--gold); 
+            transform: rotate(-12deg); 
+            font-weight: 900; 
+            background: var(--bg);
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(214,154,60,0.3);
+        }
+
+        input { 
+            width: 85%; 
+            max-width: 380px; 
+            padding: 16px; 
+            margin: 12px; 
+            border-radius: 15px; 
+            border: 1px solid #333; 
+            background: rgba(10, 10, 10, 0.8); 
+            color: #fff; 
+            text-align: center; 
+            font-size: 18px; 
+            backdrop-filter: blur(10px); 
+            outline: none;
+            transition: 0.3s;
+        }
+        input:focus { border-color: var(--gold); box-shadow: 0 0 15px rgba(214,154,60,0.2); }
+
+        button { 
+            margin-top: 30px; 
+            padding: 18px 80px; 
+            border-radius: 50px; 
+            background: linear-gradient(var(--gold), var(--deep-orange));
+            color: #000; 
+            font-weight: bold; 
+            border: none; 
+            cursor: pointer; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5); 
+            font-size: 20px; 
+            letter-spacing: 1px;
+            transition: 0.2s;
+        }
+        button:active { transform: scale(0.96); opacity: 0.9; }
         
-        /* Pure Blackout */
         #blackout { position: fixed; inset: 0; background: #000; z-index: 99; display: none; touch-action: none; }
     </style>
 </head>
@@ -34,7 +94,6 @@
 
 <div id="menu">
     <div class="logo-wrap">
-        <img src="logo.jpg" alt="Verbix Logo" class="main-logo">
         <span class="pro-tag">PRO</span>
         <h1>VERBIX</h1>
     </div>
@@ -46,7 +105,7 @@
 <div id="blackout"></div>
 
 <script>
-/* ===================== DOM & CANVAS ===================== */
+/* ===================== CANVAS PARTICLES ===================== */
 const $ = id => document.getElementById(id);
 const canvas = $("canvas"), ctx = canvas.getContext("2d");
 const menu = $("menu"), blackout = $("blackout");
@@ -61,13 +120,13 @@ class Particle {
     constructor(){ this.reset(); }
     reset(){
         this.x=Math.random()*W; this.y=Math.random()*H;
-        this.r=Math.random()*2+1; this.v=Math.random()*0.4+0.1; this.o=Math.random();
+        this.r=Math.random()*2+1; this.v=Math.random()*0.4+0.15; this.o=Math.random();
     }
     draw(){
-        this.y-=this.v; this.o-=0.002;
+        this.y-=this.v; this.o-=0.0015;
         if(this.y<0||this.o<=0) this.reset();
         ctx.fillStyle=`rgba(214,154,60,${this.o})`;
-        ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,6.28); ctx.fill();
+        ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill();
     }
 }
 const particles=[...Array(60)].map(()=>new Particle());
@@ -96,8 +155,6 @@ class Trie {
 
 /* ===================== SPEECH & REVEAL ===================== */
 let startTrie, endTrie, currentWord="", listening=false, lastFire=0;
-const DEBOUNCE_MS = 700, MIN_CHARS = 4;
-
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const recognition = SR ? new SR() : null;
 
@@ -106,7 +163,7 @@ if(recognition){
     recognition.onresult=e=>{
         const now=Date.now();
         const text=[...e.results].map(r=>r[0].transcript).join(" ").toLowerCase().trim();
-        if(text.length < MIN_CHARS || now - lastFire < DEBOUNCE_MS) return;
+        if(text.length < 4 || now - lastFire < 700) return;
 
         startTrie?.match(text,(s,e)=>{ extract(text.slice(e)); lastFire=now; });
         endTrie?.match(text,(s,e)=>{ extract(text.slice(0,s)); lastFire=now; });
@@ -137,9 +194,7 @@ function start(){
     startTrie=new Trie(); endTrie=new Trie();
     startInp.value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean).forEach(p=>startTrie.add(p));
     endInp.value.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean).forEach(p=>endTrie.add(p));
-
-    localStorage.v_start=startInp.value;
-    localStorage.v_end=endInp.value;
+    localStorage.v_start=startInp.value; localStorage.v_end=endInp.value;
 
     menu.style.display="none";
     blackout.style.display="block";
