@@ -118,11 +118,6 @@ async function startAudio() {
 
 // 4. Initialization
 $("startBtn").onclick = async () => {
-    if (HF_TOKEN === "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") {
-        alert("Please add your Hugging Face Token to the code first!");
-        return;
-    }
-
     STARTS = $("startWord").value.split(",").map(s => s.trim().toLowerCase());
     ENDS = $("endWord").value.split(",").map(s => s.trim().toLowerCase());
     
