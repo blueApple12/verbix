@@ -123,16 +123,14 @@ dom.blackout.ontouchend = e => {
 
 function performReveal(wordCount) {
     state.listening = false;
-    rec?.stop();
+    if (rec) rec.stop();
 
     const { words, triggerIndex, direction } = state.capture;
     let resultWords = [];
 
     if (direction === "after") {
-        // Grab the N words following the trigger
         resultWords = words.slice(triggerIndex, triggerIndex + wordCount);
     } else {
-        // Grab the N words preceding the trigger
         resultWords = words.slice(Math.max(0, triggerIndex - wordCount), triggerIndex);
     }
 
@@ -140,8 +138,13 @@ function performReveal(wordCount) {
     if (!result) return vib([50, 100, 50]);
 
     let url = `https://www.google.com/search?q=${encodeURIComponent(result)}`;
-    if (dom.mode.value === "images") url += "&tbm=isch";
-    if (dom.mode.value === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(result)}`;
+    
+    if (dom.mode.value === "images") {
+        url += "&tbm=isch";
+    } else if (dom.mode.value === "maps") {
+        // Corrected Maps URL format
+        url = `https://www.google.com/maps/search/${encodeURIComponent(result)}`;
+    }
     
     location.href = url;
 }
