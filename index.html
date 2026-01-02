@@ -11,26 +11,39 @@
         canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
         #menu { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
         
-        .logo-wrap { position: relative; margin-bottom: 50px; }
+        .logo-wrap { position: relative; margin-bottom: 30px; }
         h1 { 
-            font-size: 75px; margin: 0; letter-spacing: 2px; font-weight: 900; 
+            font-size: 70px; margin: 0; letter-spacing: 2px; font-weight: 900; 
             background: linear-gradient(to bottom, #fff 0%, #ffe0b2 25%, var(--gold) 45%, var(--deep) 50%, var(--gold) 55%, #4c2b0a 100%); 
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
             filter: drop-shadow(0 4px 15px rgba(0,0,0,0.8)); 
         }
         .pro-tag { 
-            position: absolute; top: -10px; left: -40px; font-size: 14px; border: 2px solid var(--gold); 
-            padding: 3px 8px; color: var(--gold); transform: rotate(-12deg); font-weight: 900; 
+            position: absolute; top: -10px; left: -35px; font-size: 12px; border: 2px solid var(--gold); 
+            padding: 2px 6px; color: var(--gold); transform: rotate(-12deg); font-weight: 900; 
             background: var(--bg); border-radius: 4px; 
         }
 
-        input { 
-            width: 85%; max-width: 380px; padding: 16px; margin: 12px; border-radius: 15px; 
+        input, select { 
+            width: 85%; max-width: 380px; padding: 16px; margin: 8px; border-radius: 15px; 
             border: 1px solid #333; background: rgba(10,10,10,.8); color: #fff; 
             text-align: center; font-size: 18px; outline: none; backdrop-filter: blur(10px);
+            appearance: none; -webkit-appearance: none;
         }
+        
+        /* Dropdown specific styling */
+        select { 
+            border-color: var(--deep); 
+            color: var(--gold);
+            font-weight: bold;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d69a3c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: left 15px center;
+        }
+
         button { 
-            margin-top: 30px; padding: 18px 80px; border-radius: 50px; 
+            margin-top: 25px; padding: 18px 80px; border-radius: 50px; 
             background: linear-gradient(var(--gold), var(--deep)); color: #000; 
             font-weight: bold; border: none; cursor: pointer; font-size: 20px; transition: .2s; 
         }
@@ -44,8 +57,16 @@
 
 <div id="menu">
     <div class="logo-wrap"><span class="pro-tag">PRO</span><h1>VERBIX</h1></div>
+    
     <input id="startWord" placeholder="Trigger Start">
     <input id="endWord" placeholder="Trigger End">
+    
+    <select id="modeSelect">
+        <option value="web">Normal Search</option>
+        <option value="images">Image Reveal</option>
+        <option value="maps">Google Maps</option>
+    </select>
+
     <button id="startBtn">ACTIVATE</button>
 </div>
 
@@ -56,14 +77,14 @@
 const $ = id => document.getElementById(id);
 const dom = {
     canvas: $("canvas"), menu: $("menu"), blackout: $("blackout"),
-    startBtn: $("startBtn"), startWord: $("startWord"), endWord: $("endWord")
+    startBtn: $("startBtn"), startWord: $("startWord"), endWord: $("endWord"),
+    mode: $("modeSelect")
 };
 const ctx = dom.canvas.getContext("2d");
 const vib = p => navigator.vibrate?.(p);
 
 let state = {
-    W: 0, H: 0, listening: false, currentWord: "", lastFire: 0, animating: true,
-    tapCount: 0, tapTimer: null
+    W: 0, H: 0, listening: false, currentWord: "", lastFire: 0, animating: true
 };
 
 /* ================== CANVAS ================== */
@@ -154,42 +175,28 @@ function handleExtract(str, now) {
 
 /* ================== GESTURES ================== */
 let startY = 0;
-dom.blackout.ontouchstart = e => {
-    startY = e.touches[0].clientY;
-};
-
+dom.blackout.ontouchstart = e => startY = e.touches[0].clientY;
 dom.blackout.ontouchend = e => {
     const dy = startY - e.changedTouches[0].clientY;
 
-    // Swipe Up: Reset
     if (dy > 100) return location.reload();
-
-    // Tap logic
-    if (Math.abs(dy) < 20) {
+    if (Math.abs(dy) < 15) {
         if (!state.currentWord) return vib(40);
-        
-        state.tapCount++;
-        
-        clearTimeout(state.tapTimer);
-        
-        state.tapTimer = setTimeout(() => {
-            if (state.tapCount >= 2) {
-                performReveal(true); // Double tap = Images
-            } else {
-                performReveal(false); // Single tap = Web
-            }
-            state.tapCount = 0;
-        }, 300); // Window for double tap
+        performReveal();
     }
 };
 
-function performReveal(isImage) {
-    if (!state.currentWord) return;
+function performReveal() {
     state.listening = false;
     rec?.stop();
     
-    let url = `https://www.google.com/search?q=${encodeURIComponent(state.currentWord)}`;
-    if (isImage) url += "&tbm=isch";
+    const word = encodeURIComponent(state.currentWord);
+    const mode = dom.mode.value;
+    
+    let url = `https://www.google.com/search?q=${word}`;
+    
+    if (mode === "images") url += "&tbm=isch";
+    if (mode === "maps") url = `https://www.google.com/maps/search/${word}`;
     
     location.href = url;
 }
@@ -202,20 +209,20 @@ dom.startBtn.onclick = () => {
 
     localStorage.v_s = dom.startWord.value;
     localStorage.v_e = dom.endWord.value;
+    localStorage.v_m = dom.mode.value;
 
     dom.menu.style.display = "none";
     dom.blackout.style.display = "block";
     state.listening = true;
     rec?.start();
     vib(100);
-    if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {});
-    }
+    document.documentElement.requestFullscreen?.().catch(()=>{});
 };
 
 /* ================== INIT ================== */
 dom.startWord.value = localStorage.v_s || "";
 dom.endWord.value = localStorage.v_e || "";
+dom.mode.value = localStorage.v_m || "web";
 </script>
 </body>
 </html>
