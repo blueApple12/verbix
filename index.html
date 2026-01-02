@@ -4,228 +4,143 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Verbix Pro</title>
-
 <style>
-body {
-    margin: 0;
-    padding: 0;
-    background: radial-gradient(circle, #2b1407, #120804 70%);
-    color: #ffdca8;
-    font-family: Georgia, serif;
-    text-align: center;
-    overflow: hidden;
-}
-
-h1 {
-    margin-top: 30px;
-    font-size: 38px;
-    letter-spacing: 3px;
-    text-shadow: 0 0 12px #ffbf66;
-}
-
-.panel {
-    margin-top: 40px;
-}
-
-label {
-    display: block;
-    margin-top: 25px;
-    font-size: 18px;
-}
-
-input {
-    margin-top: 8px;
-    padding: 10px;
-    font-size: 18px;
-    width: 80%;
-    max-width: 400px;
-    border-radius: 8px;
-    border: none;
-}
-
-button {
-    margin-top: 40px;
-    padding: 14px 40px;
-    font-size: 22px;
-    border: none;
-    border-radius: 12px;
-    background: linear-gradient(180deg, #ffda8b, #d69a3c);
-    color: #4a2a0f;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-#blackout {
-    position: fixed;
-    inset: 0;
-    background: black;
-    z-index: 9999;
-    display: none;
-}
+    body { margin: 0; padding: 0; background: #000; color: #ffdca8; font-family: serif; text-align: center; overflow: hidden; }
+    #menu { padding: 40px 20px; display: flex; flex-direction: column; align-items: center; background: radial-gradient(circle, #2b1407, #000); height: 100vh; }
+    h1 { font-size: 45px; text-shadow: 0 0 15px #d69a3c; margin-bottom: 40px; }
+    input { margin: 12px; padding: 15px; width: 80%; border-radius: 10px; border: 1px solid #d69a3c; font-size: 18px; background: #1a0a04; color: white; }
+    button { margin-top: 30px; padding: 18px 50px; font-size: 24px; border-radius: 15px; background: linear-gradient(180deg, #ffda8b, #d69a3c); color: #4a2a0f; font-weight: bold; cursor: pointer; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+    #blackout { position: fixed; inset: 0; background: black; z-index: 9999; display: none; touch-action: none; }
+    #searchFrame { position: fixed; inset: 0; width: 100%; height: 100%; border: none; display: none; z-index: 9998; }
+    .indicator { position: fixed; bottom: 8px; right: 8px; width: 5px; height: 5px; background: #111; border-radius: 50%; z-index: 10000; }
 </style>
 </head>
-
 <body>
 
-<h1>VERBIX</h1>
-
-<div class="panel" id="menu">
-    <label>
-        <input id="startWord" placeholder="Start Phrase">
-    </label>
-
-    <label>
-        <input id="endWord" placeholder="End Phrase">
-    </label>
-
-    <button id="startBtn">Start</button>
+<div id="menu">
+    <h1>VERBIX</h1>
+    <input id="startWord" placeholder="Trigger Start (e.g. 'המילה היא')">
+    <input id="endWord" placeholder="Trigger End (e.g. 'בחירה חופשית')">
+    <button id="startBtn">ACTIVATE</button>
 </div>
 
+<iframe id="searchFrame"></iframe>
 <div id="blackout"></div>
+<div class="indicator" id="dot"></div>
 
 <script>
+// ==========================================
+// CONFIGURATION - PASTE YOUR TOKEN BELOW
+// ==========================================
+const HF_TOKEN = "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"; 
+const MODEL_URL = "https://api-inference.huggingface.co/models/openai/whisper-large-v3-turbo";
+
 const $ = id => document.getElementById(id);
+let STARTS = [], ENDS = [], currentWord = "";
+let mediaRecorder, audioChunks = [], listening = false;
 
-// Restore saved values
-$("startWord").value = localStorage.getItem("verbix_start") || "";
-$("endWord").value   = localStorage.getItem("verbix_end")   || "";
+const vib = (p) => { if ("vibrate" in navigator) navigator.vibrate(p); };
+const setDot = (c) => { $("dot").style.background = c; };
 
-let wakeLock = null;
+// 1. Swipe Reveal Logic
+let tStart = 0;
+$("blackout").addEventListener('touchstart', e => { tStart = e.touches[0].clientY; });
+$("blackout").addEventListener('touchend', e => {
+    if (tStart - e.changedTouches[0].clientY > 100) {
+        if (!currentWord) { vib(50); return; }
+        $("blackout").style.display = "none";
+        $("searchFrame").style.display = "block";
+    }
+});
 
-async function enableWakeLock() {
+// 2. AI Whisper Logic
+async function callWhisper(blob) {
+    setDot("#300"); // Thinking...
     try {
-        if ("wakeLock" in navigator) {
-            wakeLock = await navigator.wakeLock.request("screen");
+        const response = await fetch(MODEL_URL, {
+            headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "audio/flac" },
+            method: "POST", body: blob,
+        });
+        const res = await response.json();
+        if (res.text) processText(res.text.toLowerCase());
+    } catch (e) { console.error(e); }
+    setDot("#111");
+}
+
+function processText(text) {
+    console.log("Heard:", text);
+    // Logic for capturing word before/after triggers
+    ENDS.forEach(p => {
+        if (text.includes(p)) {
+            let seg = text.split(p)[text.split(p).length - 2].trim().split(/\s+/);
+            updateWord(seg[seg.length - 1]);
         }
-    } catch {}
+    });
+    STARTS.forEach(p => {
+        if (text.includes(p)) {
+            let seg = text.split(p)[1].trim().split(/\s+/);
+            updateWord(seg[0]);
+        }
+    });
 }
 
-function releaseWakeLock() {
-    try {
-        wakeLock?.release();
-        wakeLock = null;
-    } catch {}
+function updateWord(word) {
+    word = word.replace(/[.,!?]/g, "");
+    if (!word || word === currentWord) return;
+    currentWord = word;
+    $("searchFrame").src = `https://www.google.com/search?q=${encodeURIComponent(word)}&igu=1`;
+    vib([150, 50, 150]); // The "Got it" vibration
 }
 
-// ======================
-// Robust Speech Recognition
-// ======================
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognition;
-let listening = false;
-
-let STARTS = [];
-let ENDS = [];
-
-if (SR) {
-    recognition = new SR();
-    recognition.lang = "he-IL";
-    recognition.continuous = true;
-    recognition.interimResults = true; 
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = e => {
-        // We take the very last result to avoid background noise "buildup"
-        const result = e.results[e.results.length - 1];
-        const text = result[0].transcript.trim().toLowerCase();
-        handleSpeech(text);
+// 3. Audio Recording Loop (4s Chunks)
+async function startAudio() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    
+    mediaRecorder.ondataavailable = e => {
+        audioChunks.push(e.data);
+        if (mediaRecorder.state === "inactive") {
+            const blob = new Blob(audioChunks, { type: 'audio/flac' });
+            callWhisper(blob);
+            audioChunks = [];
+            if(listening) runCycle();
+        }
     };
 
-    // If it stops due to noise/silence, force it back on immediately
-    recognition.onend = () => {
-        if (listening) {
-            try { recognition.start(); } catch(e) {}
-        }
+    const runCycle = () => {
+        try {
+            mediaRecorder.start();
+            setTimeout(() => { if(mediaRecorder.state === "recording") mediaRecorder.stop(); }, 4000);
+        } catch(e) {}
     };
-
-    recognition.onerror = (event) => {
-        if(event.error === 'no-speech') {
-            // Keep going
-        }
-    };
+    runCycle();
 }
 
-function startListening() {
-    if (!recognition || listening) return;
-    listening = true;
-    
-    // Vibrate once to let you know it's "live" in your pocket
-    if ("vibrate" in navigator) navigator.vibrate(50);
-    
-    recognition.start();
-}
-
-function cleanWords(txt) {
-    return txt.replace(/[.,!?״”“]/g, "").trim().split(/\s+/);
-}
-
-function handleSpeech(text) {
-    // Check END phrases
-    for (const phrase of ENDS) {
-        if (text.includes(phrase)) {
-            const idx = text.indexOf(phrase);
-            const before = text.slice(0, idx).trim();
-            const words = cleanWords(before);
-            const word = words[words.length - 1];
-            if (word) return finish(word);
-        }
-    }
-
-    // Check START phrases
-    for (const phrase of STARTS) {
-        if (text.includes(phrase)) {
-            const idx = text.indexOf(phrase);
-            const after = text.slice(idx + phrase.length).trim();
-            const words = cleanWords(after);
-            const word = words[0];
-            if (word) return finish(word);
-        }
-    }
-}
-
-function finish(word) {
-    listening = false;
-    
-    // Vibrate: Double pulse confirms success
-    if ("vibrate" in navigator) {
-        navigator.vibrate([300, 100, 300]);
-    }
-
-    recognition.stop();
-    releaseWakeLock();
-
-    setTimeout(() => {
-        location.replace(
-            "https://www.google.com/search?q=" +
-            encodeURIComponent(word)
-        );
-    }, 200);
-}
-
-// ======================
-// Setup & Start
-// ======================
+// 4. Initialization
 $("startBtn").onclick = async () => {
-    STARTS = $("startWord").value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-    ENDS = $("endWord").value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-
-    if (!STARTS.length && !ENDS.length) {
-        alert("Please set at least one phrase.");
+    if (HF_TOKEN === "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") {
+        alert("Please add your Hugging Face Token to the code first!");
         return;
     }
 
-    localStorage.setItem("verbix_start", $("startWord").value.trim());
-    localStorage.setItem("verbix_end", $("endWord").value.trim());
-
-    try { await document.documentElement.requestFullscreen(); } catch {}
-    enableWakeLock();
+    STARTS = $("startWord").value.split(",").map(s => s.trim().toLowerCase());
+    ENDS = $("endWord").value.split(",").map(s => s.trim().toLowerCase());
+    
+    localStorage.setItem("verbix_start", $("startWord").value);
+    localStorage.setItem("verbix_end", $("endWord").value);
 
     $("menu").style.display = "none";
     $("blackout").style.display = "block";
-
-    startListening();
+    
+    listening = true;
+    startAudio();
+    vib(100); // System Ready vibe
+    try { await document.documentElement.requestFullscreen(); } catch(e) {}
 };
-</script>
 
+// Persistence
+$("startWord").value = localStorage.getItem("verbix_start") || "";
+$("endWord").value = localStorage.getItem("verbix_end") || "";
+</script>
 </body>
 </html>
