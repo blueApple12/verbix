@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verbix</title>
+<title>Verbix Pro</title>
 
 <style>
 body {
@@ -13,6 +13,7 @@ body {
     color: #ffdca8;
     font-family: Georgia, serif;
     text-align: center;
+    overflow: hidden;
 }
 
 h1 {
@@ -70,11 +71,11 @@ button {
 
 <div class="panel" id="menu">
     <label>
-        <input id="startWord" placeholder="Start Phrases">
+        <input id="startWord" placeholder="Start Phrase">
     </label>
 
     <label>
-        <input id="endWord" placeholder="End Phrases">
+        <input id="endWord" placeholder="End Phrase">
     </label>
 
     <button id="startBtn">Start</button>
@@ -85,15 +86,10 @@ button {
 <script>
 const $ = id => document.getElementById(id);
 
-// ======================
 // Restore saved values
-// ======================
 $("startWord").value = localStorage.getItem("verbix_start") || "";
 $("endWord").value   = localStorage.getItem("verbix_end")   || "";
 
-// ======================
-// Screen Wake Lock
-// ======================
 let wakeLock = null;
 
 async function enableWakeLock() {
@@ -111,14 +107,8 @@ function releaseWakeLock() {
     } catch {}
 }
 
-document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && wakeLock) {
-        enableWakeLock();
-    }
-});
-
 // ======================
-// Speech Recognition
+// Robust Speech Recognition
 // ======================
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition;
@@ -131,43 +121,49 @@ if (SR) {
     recognition = new SR();
     recognition.lang = "he-IL";
     recognition.continuous = true;
-    recognition.interimResults = true;
+    recognition.interimResults = true; 
+    recognition.maxAlternatives = 1;
 
     recognition.onresult = e => {
-        const text = e.results[e.results.length - 1][0].transcript.trim();
+        // We take the very last result to avoid background noise "buildup"
+        const result = e.results[e.results.length - 1];
+        const text = result[0].transcript.trim().toLowerCase();
         handleSpeech(text);
     };
 
-    recognition.onerror = restartListening;
-    recognition.onend = restartListening;
+    // If it stops due to noise/silence, force it back on immediately
+    recognition.onend = () => {
+        if (listening) {
+            try { recognition.start(); } catch(e) {}
+        }
+    };
+
+    recognition.onerror = (event) => {
+        if(event.error === 'no-speech') {
+            // Keep going
+        }
+    };
 }
 
 function startListening() {
     if (!recognition || listening) return;
     listening = true;
+    
+    // Vibrate once to let you know it's "live" in your pocket
+    if ("vibrate" in navigator) navigator.vibrate(50);
+    
     recognition.start();
-}
-
-function restartListening() {
-    if (!listening) return;
-    try { recognition.start(); } catch {}
 }
 
 function cleanWords(txt) {
     return txt.replace(/[.,!?״”“]/g, "").trim().split(/\s+/);
 }
 
-// ======================
-// Core logic
-// ======================
 function handleSpeech(text) {
-
-    // END phrases → word BEFORE
-    if (ENDS.length) {
-        for (const phrase of ENDS) {
+    // Check END phrases
+    for (const phrase of ENDS) {
+        if (text.includes(phrase)) {
             const idx = text.indexOf(phrase);
-            if (idx === -1) continue;
-
             const before = text.slice(0, idx).trim();
             const words = cleanWords(before);
             const word = words[words.length - 1];
@@ -175,12 +171,10 @@ function handleSpeech(text) {
         }
     }
 
-    // START phrases → word AFTER
-    if (STARTS.length) {
-        for (const phrase of STARTS) {
+    // Check START phrases
+    for (const phrase of STARTS) {
+        if (text.includes(phrase)) {
             const idx = text.indexOf(phrase);
-            if (idx === -1) continue;
-
             const after = text.slice(idx + phrase.length).trim();
             const words = cleanWords(after);
             const word = words[0];
@@ -191,46 +185,39 @@ function handleSpeech(text) {
 
 function finish(word) {
     listening = false;
+    
+    // Vibrate: Double pulse confirms success
+    if ("vibrate" in navigator) {
+        navigator.vibrate([300, 100, 300]);
+    }
+
     recognition.stop();
     releaseWakeLock();
 
     setTimeout(() => {
-        // 🔒 no history entry
         location.replace(
             "https://www.google.com/search?q=" +
             encodeURIComponent(word)
         );
-    }, 150);
+    }, 200);
 }
 
 // ======================
-// Start button
+// Setup & Start
 // ======================
-async function goFullscreen() {
-    try { await document.documentElement.requestFullscreen(); } catch {}
-}
-
 $("startBtn").onclick = async () => {
-
-    STARTS = $("startWord").value
-        .split(",")
-        .map(s => s.trim())
-        .filter(Boolean);
-
-    ENDS = $("endWord").value
-        .split(",")
-        .map(s => s.trim())
-        .filter(Boolean);
+    STARTS = $("startWord").value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+    ENDS = $("endWord").value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 
     if (!STARTS.length && !ENDS.length) {
-        alert("Please set at least one START or END phrase.");
+        alert("Please set at least one phrase.");
         return;
     }
 
     localStorage.setItem("verbix_start", $("startWord").value.trim());
     localStorage.setItem("verbix_end", $("endWord").value.trim());
 
-    await goFullscreen();
+    try { await document.documentElement.requestFullscreen(); } catch {}
     enableWakeLock();
 
     $("menu").style.display = "none";
