@@ -12,7 +12,7 @@
         canvas { position: fixed; inset: 0; pointer-events: none; }
         #menu { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; }
         .logo-wrap { position: relative; margin-bottom: 50px; }
-        h1 { font-family: 'Arial Black', sans-serif; font-size: 72px; font-weight: 900; margin: 0; background: linear-gradient(#fff, var(--op), var(--o), #f57c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; -webkit-text-stroke: 1.5px rgba(255,255,255,.1); filter: drop-shadow(0 6px 30px rgba(255,183,77,.45)); }
+        h1 { font-family: 'Arial Black', sans-serif; font-size: 72px; font-weight: 900; margin: 0; background: linear-gradient(#fff, var(--op), var(--o), #f57c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; -webkit-text-stroke: 1.5px rgba(255,255,255,.1); filter: drop-shadow(0 6px 30px rgba(255, 183, 77, 0.45)); }
         .pro-tag { position: absolute; top: -18px; left: -28px; font-size: 16px; font-weight: 900; transform: rotate(-14deg); z-index: 15; padding: 5px 14px; background: #000; border: 2px solid var(--o); border-radius: 5px; box-shadow: 0 4px 15px rgba(255,183,77,.5); }
         .pro-tag span { background: linear-gradient(#fff, var(--o)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block; }
         input, select, button { width: 90%; max-width: 380px; padding: 18px; margin: 10px 0; border-radius: 15px; border: 2px solid var(--o); background: rgba(20,12,5,.9); color: #fff; text-align: center; font-size: 18px; outline: none; backdrop-filter: blur(12px); transition: .3s; }
@@ -57,20 +57,20 @@ if (SR) {
     rec.lang = "he-IL"; 
     rec.continuous = true; 
     rec.interimResults = true;
-    rec.maxAlternatives = 1; // Faster processing for street use
+    rec.maxAlternatives = 1;
 
     rec.onresult = e => {
         if (st.fired) return;
         let transcript = "";
+        let final = false;
+
         for (let i = e.resultIndex; i < e.results.length; i++) {
-            // Street Optimization: Only accept results with reasonable confidence
             if (e.results[i][0].confidence > 0.3) {
                 transcript += e.results[i][0].transcript;
-                // If phone is "Certain" (isFinal), process immediately
-                if (e.results[i].isFinal) process(transcript.toLowerCase());
+                if (e.results[i].isFinal) final = true;
             }
         }
-        process(transcript.toLowerCase());
+        process(transcript.toLowerCase(), final);
     };
 
     rec.onerror = () => { if (st.listening) restartRec(); };
@@ -79,10 +79,10 @@ if (SR) {
 
 function restartRec() {
     try { rec.stop(); } catch(e) {}
-    setTimeout(() => { try { rec.start(); } catch(e) {} }, 100);
+    setTimeout(() => { if (st.listening) try { rec.start(); } catch(e) {} }, 250);
 }
 
-function process(txt) {
+function process(txt, isFinal) {
     if (st.fired || !txt) return;
     const clean = txt.replace(/[.,!?״"']/g, "").trim();
     const sTrig = $('s').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
