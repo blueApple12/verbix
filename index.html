@@ -52,6 +52,12 @@ let rec;
 
 if (SR) {
     rec = new SR(); rec.lang = "he-IL"; rec.continuous = true; rec.interimResults = true;
+    
+    const forceStart = () => {
+        if (!st.listening || st.fired) return;
+        try { rec.start(); } catch(e) {}
+    };
+
     rec.onresult = e => {
         if (st.fired) return;
         st.lastHit = Date.now();
@@ -59,7 +65,6 @@ if (SR) {
         let isFinal = false;
 
         for (let i = e.resultIndex; i < e.results.length; i++) {
-            // Restore Confidence Filtering
             if (e.results[i][0].confidence > 0.3) {
                 transcript += e.results[i][0].transcript;
                 if (e.results[i].isFinal) isFinal = true;
@@ -73,7 +78,6 @@ if (SR) {
         const eT = $('e').value.toLowerCase().split(",").map(x => x.trim()).filter(Boolean);
 
         for (let i = 0; i < words.length; i++) {
-            // Start triggers can be interim (speed)
             for (let ph of sT) {
                 const phW = ph.split(/\s+/);
                 if (words.slice(i, i + phW.length).join(" ") === ph) {
@@ -81,7 +85,6 @@ if (SR) {
                     if (target) return reveal(target);
                 }
             }
-            // End triggers MUST be isFinal (safety)
             if (isFinal) {
                 for (let ph of eT) {
                     const phW = ph.split(/\s+/);
@@ -94,14 +97,15 @@ if (SR) {
         }
     };
     
-    const pulse = () => { 
-        if (st.listening && !st.fired && (Date.now() - st.lastHit) > 3000) {
+    rec.onend = forceStart;
+    rec.onerror = forceStart;
+    
+    // Immediate Heartbeat: if silent for 2s, kill it to trigger onend restart
+    setInterval(() => { 
+        if (st.listening && !st.fired && (Date.now() - st.lastHit) > 2000) {
             try { rec.stop(); } catch(e) {}
         }
-    };
-    rec.onend = () => { if (st.listening && !st.fired) try { rec.start(); } catch(e) {} };
-    rec.onerror = rec.onend;
-    setInterval(pulse, 1000);
+    }, 500);
 }
 
 function reveal(t) {
@@ -109,9 +113,9 @@ function reveal(t) {
     try { rec.stop(); } catch(e) {}
     navigator.vibrate?.([80, 50, 80]); 
     let url = `https://www.google.com/search?q=${encodeURIComponent(t)}`;
-    const mode = $('m').value;
-    if (mode === "images") url += "&tbm=isch";
-    if (mode === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(t)}`;
+    const m = $('m').value;
+    if (m === "images") url += "&tbm=isch";
+    if (m === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(t)}`;
     location.replace(url);
 }
 
@@ -119,10 +123,11 @@ $('b').onclick = () => {
     localStorage.v_s = $('s').value; localStorage.v_e = $('e').value; localStorage.v_m = $('m').value;
     $('menu').style.display = 'none'; $('blackout').style.display = 'block';
     st.listening = true; st.lastHit = Date.now();
-    try { rec.start(); } catch(e) {}
+    forceStart();
     navigator.vibrate?.(100);
     document.documentElement.requestFullscreen?.().catch(()=>{});
 };
+const forceStart = () => { if (st.listening && !st.fired) try { rec.start(); } catch(e) {} };
 
 $('s').value = localStorage.v_s || ''; $('e').value = localStorage.v_e || ''; $('m').value = localStorage.v_m || 'web';
 </script>
