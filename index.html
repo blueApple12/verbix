@@ -6,9 +6,9 @@
     <title>Verbix PRO</title>
     <style>
         :root { 
-            --orange-pop: #ffab40;  /* Bright highlight */
-            --orange-mid: #ff6d00;  /* Main vibrant orange */
-            --orange-deep: #d84315; /* Dark copper/red-orange */
+            --orange-pop: #ffab40;
+            --orange-mid: #ff6d00;
+            --orange-deep: #d84315;
             --bg: #050301; 
         }
         
@@ -33,15 +33,12 @@
             height: 100vh; 
         }
         
-        /* LOGO WRAPPER */
         .logo-wrap { 
             position: relative; 
             margin-bottom: 40px; 
             display: inline-block;
-            /* Slight rotation for dynamic feel if desired, currently straight */
         }
 
-        /* MAIN LOGO - SMOOTH ORANGE GRADIENT (No Hard Lines) */
         h1 { 
             font-family: 'Arial Black', 'Impact', sans-serif;
             font-size: 85px; 
@@ -49,24 +46,12 @@
             line-height: 1;
             letter-spacing: 1px; 
             text-transform: uppercase;
-            
-            /* The "Orangy" Smooth Gradient */
-            background: linear-gradient(
-                180deg, 
-                #ffffff 0%,       /* White Shine */
-                #ffab40 30%,      /* Light Orange */
-                #ff6d00 60%,      /* Vibrant Orange */
-                #bf360c 100%      /* Deep Copper/Red-Orange */
-            );
-            
+            background: linear-gradient(180deg, #ffffff 0%, #ffab40 30%, #ff6d00 60%, #bf360c 100%);
             -webkit-background-clip: text; 
             -webkit-text-fill-color: transparent; 
-            
-            /* Deep glow behind */
             filter: drop-shadow(0 4px 25px rgba(255, 109, 0, 0.5));
         }
 
-        /* PRO TAG - MATCHING FADE */
         .pro-tag { 
             position: absolute; 
             top: -30px; 
@@ -80,28 +65,20 @@
             padding: 4px 10px;
             background: rgba(0,0,0,0.8);
             border-radius: 6px;
-
-            /* Gradient Text */
             background-image: linear-gradient(180deg, #fff 0%, #ff6d00 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-
-            /* Orange Outline */
             border: 2px solid #ff6d00;
             box-shadow: 0 0 10px rgba(255, 109, 0, 0.3);
         }
 
-        /* INPUTS - ORANGE OUTLINES */
         input, select { 
             width: 80%; 
             max-width: 350px; 
             padding: 15px; 
             margin: 10px; 
             border-radius: 12px; 
-            
-            /* The requested Outline Color */
             border: 2px solid var(--orange-mid); 
-            
             background: rgba(20, 10, 5, 0.85); 
             color: #fff; 
             text-align: center; 
@@ -109,35 +86,21 @@
             outline: none; 
             backdrop-filter: blur(8px);
             transition: all 0.3s ease;
-            box-shadow: 0 0 15px rgba(255, 109, 0, 0.1); /* Subtle orange ambient glow */
+            box-shadow: 0 0 15px rgba(255, 109, 0, 0.1);
             appearance: none; -webkit-appearance: none;
         }
         
-        input::placeholder { color: rgba(255, 171, 64, 0.5); }
-
         input:focus, select:focus {
-            border-color: #fff; /* White flash on focus */
+            border-color: #fff;
             box-shadow: 0 0 20px rgba(255, 109, 0, 0.4);
             transform: scale(1.02);
         }
 
-        select {
-             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ff6d00' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-             background-repeat: no-repeat;
-             background-position: left 15px center;
-             color: var(--orange-pop);
-             font-weight: bold;
-        }
-
-        /* ACTIVATE BUTTON */
         button { 
             margin-top: 35px; 
             padding: 16px 70px; 
             border-radius: 50px; 
-            
-            /* Deep Orange Gradient Button */
             background: linear-gradient(to bottom, #ff9100, #bf360c); 
-            
             color: #1a0500; 
             font-weight: 800; 
             letter-spacing: 1.5px;
@@ -162,8 +125,8 @@
         <h1>VERBIX</h1>
     </div>
     
-    <input id="startWord" placeholder="Start Triggers (e.g. המילה)">
-    <input id="endWord" placeholder="End Triggers (e.g. נכון)">
+    <input id="startWord" placeholder="Start Triggers (e.g. המילה היא)">
+    <input id="endWord" placeholder="End Triggers (e.g. בחירה חופשית)">
     
     <select id="modeSelect">
         <option value="web">Google Search</option>
@@ -191,22 +154,15 @@ let state = {
     fired: false
 };
 
-/* ================== ORANGE PARTICLES ================== */
+/* ================== AMBIENT PARTICLES ================== */
 const resize = () => { dom.canvas.width = innerWidth; dom.canvas.height = innerHeight; };
 window.onresize = resize; resize();
 class Particle {
     constructor() { this.reset(); }
-    reset() { 
-        this.x = Math.random() * innerWidth; 
-        this.y = Math.random() * innerHeight; 
-        this.r = Math.random() * 2; 
-        this.v = Math.random() * 0.5 + 0.2; 
-        this.o = Math.random() * 0.6; 
-    }
+    reset() { this.x = Math.random() * innerWidth; this.y = Math.random() * innerHeight; this.r = Math.random() * 2; this.v = Math.random() * 0.5 + 0.2; this.o = Math.random() * 0.6; }
     draw() { 
         this.y -= this.v; this.o -= 0.005; 
         if (this.y < 0 || this.o <= 0) this.reset(); 
-        /* Orange/Ember Color for particles */
         ctx.fillStyle = `rgba(255, 140, 0, ${this.o})`; 
         ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.fill(); 
     }
@@ -214,7 +170,7 @@ class Particle {
 const pts = Array.from({ length: 45 }, () => new Particle());
 (function anim() { ctx.clearRect(0, 0, innerWidth, innerHeight); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
 
-/* ================== NASA-LEVEL STT LOGIC ================== */
+/* ================== REFINED SPEECH LOGIC ================== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec;
 
@@ -232,19 +188,21 @@ if (SR) {
             transcript += e.results[i][0].transcript;
         }
 
-        const cleanText = transcript.toLowerCase().trim().replace(/[.,!?״"']/g, "");
+        // AGGRESSIVE TRIMMING
+        const cleanText = transcript.toLowerCase().replace(/[.,!?״"']/g, "").trim();
         const words = cleanText.split(/\s+/).filter(Boolean);
         state.lastWords = words;
 
         const starts = dom.startWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
         const ends = dom.endWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 
-        // Logic: Sliding Window Search (High Noise Tolerance)
         for (let phrase of starts) {
             if (cleanText.includes(phrase)) {
                 const parts = cleanText.split(phrase);
                 const after = parts[parts.length - 1].trim().split(/\s+/);
-                if (after[0]) return performReveal(after[0]);
+                const target = after[0];
+                // JUNK WORD FILTER
+                if (target && target.length > 2) return performReveal(target);
             }
         }
 
@@ -252,7 +210,9 @@ if (SR) {
             if (cleanText.includes(phrase)) {
                 const parts = cleanText.split(phrase);
                 const before = parts[parts.length - 2]?.trim().split(/\s+/);
-                if (before && before.length > 0) return performReveal(before[before.length - 1]);
+                const target = before ? before[before.length - 1] : null;
+                // JUNK WORD FILTER
+                if (target && target.length > 2) return performReveal(target);
             }
         }
     };
@@ -261,10 +221,11 @@ if (SR) {
     rec.onend = () => { if (state.listening) rec.start(); };
 }
 
-/* ================== ACTION & REDIRECT ================== */
+/* ================== ACTION ================== */
 dom.blackout.onclick = () => {
     if (state.fired || !state.lastWords.length) return vib(40);
-    performReveal(state.lastWords[state.lastWords.length - 1]);
+    const target = state.lastWords[state.lastWords.length - 1];
+    if (target && target.length > 2) performReveal(target); // Manual tap junk filter
 };
 
 let sY = 0;
@@ -275,7 +236,6 @@ function performReveal(target) {
     if (state.fired || !target) return;
     state.fired = true;
     state.listening = false;
-    
     if (rec) rec.stop();
     vib([80, 50, 80]); 
 
@@ -290,7 +250,6 @@ dom.startBtn.onclick = () => {
     localStorage.v_s = dom.startWord.value;
     localStorage.v_e = dom.endWord.value;
     localStorage.v_m = dom.mode.value;
-    
     dom.menu.style.display = "none"; 
     dom.blackout.style.display = "block";
     state.listening = true; 
