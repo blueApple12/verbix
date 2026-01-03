@@ -6,20 +6,16 @@
     <title>Verbix PRO GOLD</title>
     <style>
         :root { 
-            /* צבעים מותאמים אישית לפי הלוגו 🎨 */
-            --gold-shine: #fff5e6;   /* הברקה לבנה-זהובה */
-            --gold-bright: #ffcc33;  /* צהוב זהב בהיר */
-            --gold-main: #d4af37;    /* זהב קלאסי */
-            --gold-deep: #8b6b15;    /* זהב עמוק/חום לצללים */
-            --orange-fire: #ff6600;  /* כתום של הגיצים */
-            --bg-dark: #000000; 
+            --gold-shine: #ffffff;
+            --gold-mid: #d89330; 
+            --gold-deep: #4d2e00; 
+            --bg: #000000; 
         }
         
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%;
-            /* רקע כהה מאוד עם הילה מרכזית עמומה */
-            background: radial-gradient(circle at center, #151008 0%, #000000 100%); 
-            color: #fff8e1; font-family: 'Segoe UI', system-ui, sans-serif; 
+            background: radial-gradient(circle at center, #150f05 0%, #000000 100%); 
+            color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; 
             overflow: hidden; position: fixed;
         }
 
@@ -33,44 +29,42 @@
         .logo-wrap { position: relative; margin-bottom: 40px; display: inline-block; }
 
         h1 { 
-            font-family: 'Arial Black', sans-serif; font-size: 85px; margin: 0; line-height: 1; 
-            letter-spacing: 1px; text-transform: uppercase;
-            /* גרדיאנט זהב יוקרתי לפי הלוגו */
+            font-family: 'Arial Black', sans-serif; font-size: clamp(50px, 15vw, 85px); 
+            margin: 0; line-height: 1; letter-spacing: 1px; text-transform: uppercase;
+            /* Multi-layered metallic gradient */
             background: linear-gradient(180deg, 
                 var(--gold-shine) 0%, 
-                var(--gold-bright) 45%, 
-                var(--gold-main) 60%, 
+                #ffcc66 35%, 
+                var(--gold-mid) 55%, 
                 var(--gold-deep) 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
-            filter: drop-shadow(0 6px 15px rgba(0, 0, 0, 0.8));
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.8));
         }
 
         .pro-tag { 
-            position: absolute; top: -30px; left: -25px; font-size: 20px; font-weight: 900;
-            transform: rotate(-10deg); z-index: 15; padding: 4px 12px;
-            background: rgba(0,0,0,0.9); border-radius: 6px; border: 2px solid var(--gold-main);
-            background-image: linear-gradient(180deg, var(--gold-shine) 0%, var(--gold-main) 100%);
+            position: absolute; top: -25px; left: -20px; font-size: 18px; font-weight: 900;
+            transform: rotate(-10deg); z-index: 15; padding: 2px 10px;
+            background: rgba(0,0,0,0.9); border-radius: 4px; border: 1.5px solid var(--gold-mid);
+            background-image: linear-gradient(180deg, #fff 0%, var(--gold-mid) 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
         }
 
         input, select, button { width: 85%; max-width: 350px; outline: none; box-sizing: border-box; }
 
         input, select { 
-            padding: 16px; margin: 10px; border-radius: 12px; border: 1px solid var(--gold-deep); 
-            background: rgba(10, 10, 10, 0.9); color: #fff; text-align: center; font-size: 17px; 
-            backdrop-filter: blur(10px); transition: 0.3s;
+            padding: 14px; margin: 8px; border-radius: 10px; border: 1px solid var(--gold-deep); 
+            background: rgba(15, 10, 5, 0.9); color: #fff; text-align: center; font-size: 16px; 
+            backdrop-filter: blur(10px);
         }
         
-        input:focus { border-color: var(--gold-main); box-shadow: 0 0 15px rgba(212, 175, 55, 0.2); }
+        input:focus { border-color: var(--gold-mid); box-shadow: 0 0 10px rgba(216, 147, 48, 0.3); }
 
         button { 
-            margin-top: 35px; padding: 18px; border-radius: 50px; font-size: 20px; font-weight: 800;
-            background: linear-gradient(to bottom, var(--gold-bright), var(--gold-deep)); 
-            color: #1a0f00; border: 1px solid var(--gold-shine);
-            cursor: pointer; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); transition: 0.2s;
+            margin-top: 30px; padding: 18px; border-radius: 50px; font-size: 19px; font-weight: 800;
+            background: linear-gradient(to bottom, #ffcc66, var(--gold-mid)); 
+            color: #1a0f00; border: none; cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
         }
-        button:active { transform: scale(0.98); }
 
         #blackout { position: fixed; inset: 0; background: #000; z-index: 999; display: none; touch-action: none; }
     </style>
@@ -100,78 +94,63 @@ const ctx = d.c.getContext("2d");
 
 let st = { listening: false, words: [], fired: false };
 
-// Particles (פי 5 יותר חלקיקים לאפקט "גיצים") 🔥
+// High-Density Fire Particles (500 Particles)
 const res = () => { d.c.width = innerWidth; d.c.height = innerHeight; };
 window.onresize = res; res();
 class P { 
     constructor() { this.reset(); } 
     reset() { 
-        this.x = Math.random()*innerWidth; 
-        this.y = Math.random()*innerHeight + innerHeight; // מתחילים מלמטה
-        this.r = Math.random()*1.5 + 0.5; 
-        this.vX = (Math.random() - 0.5) * 0.5; // תנועה צדית קלה
-        this.vY = Math.random()*1.5 + 0.5; 
-        this.o = Math.random()*0.8; 
-        this.color = Math.random() > 0.5 ? '#ffcc33' : '#ff6600'; // זהב או כתום אש
+        this.x = Math.random() * innerWidth; 
+        this.y = Math.random() * innerHeight + innerHeight; 
+        this.r = Math.random() * 1.2 + 0.5; 
+        this.vY = Math.random() * 1.5 + 0.5; 
+        this.o = Math.random() * 0.7; 
+        this.c = Math.random() > 0.4 ? '#d89330' : '#ffcc66'; 
     } 
     draw() { 
-        this.y -= this.vY; 
-        this.x += this.vX;
-        this.o -= 0.003; 
+        this.y -= this.vY; this.o -= 0.003; 
         if (this.y < -10 || this.o <= 0) this.reset(); 
-        ctx.fillStyle = this.color;
-        ctx.globalAlpha = this.o;
-        ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,7); ctx.fill(); 
+        ctx.fillStyle = this.c; ctx.globalAlpha = this.o;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, 7); ctx.fill(); 
     } 
 }
-// הוגדל מ-40 ל-200 חלקיקים
-const pts = Array.from({length: 200}, () => new P());
+const pts = Array.from({length: 500}, () => new P());
 (function anim() { 
     ctx.clearRect(0,0,innerWidth,innerHeight); 
-    ctx.globalCompositeOperation = 'lighter'; // גורם לחלקיקים "להאיר" כשהם חופפים
+    ctx.globalCompositeOperation = 'lighter';
     pts.forEach(p => p.draw()); 
     requestAnimationFrame(anim); 
 })();
 
-// Speech Recognition Logic 🎤
+// STT Logic
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec;
 if (SR) {
-    rec = new SR();
-    rec.lang = "he-IL";
-    rec.continuous = true;
-    rec.interimResults = true;
-
+    rec = new SR(); rec.lang = "he-IL"; rec.continuous = true; rec.interimResults = true;
     rec.onresult = e => {
         if (st.fired) return;
         let tr = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-            tr += e.results[i][0].transcript;
-        }
-        
+        for (let i = e.resultIndex; i < e.results.length; i++) tr += e.results[i][0].transcript;
         const txt = tr.toLowerCase().trim().replace(/[.,!?״"']/g, "");
         if (!txt) return;
         st.words = txt.split(/\s+/).filter(Boolean);
 
-        const sTriggers = d.s.value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
-        const eTriggers = d.e.value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+        const sL = d.s.value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+        const eL = d.e.value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
 
-        for (let ph of sTriggers) {
+        for (let ph of sL) {
             if (txt.includes(ph)) {
-                const parts = txt.split(ph);
-                const target = parts[parts.length - 1].trim().split(/\s+/)[0];
-                if (target) { reveal(target); return; }
+                const target = txt.split(ph).pop().trim().split(/\s+/)[0];
+                if (target) return reveal(target);
             }
         }
-        for (let ph of eTriggers) {
+        for (let ph of eL) {
             if (txt.includes(ph)) {
-                const parts = txt.split(ph);
-                const beforeArray = parts[parts.length - 2]?.trim().split(/\s+/);
-                if (beforeArray?.length) { reveal(beforeArray[beforeArray.length - 1]); return; }
+                const before = txt.split(ph)[0].trim().split(/\s+/);
+                if (before.length) return reveal(before.pop());
             }
         }
     };
-    
     const restart = () => { if (st.listening && !st.fired) try { rec.start(); } catch(e) {} };
     rec.onerror = restart; rec.onend = restart;
 }
@@ -179,19 +158,14 @@ if (SR) {
 function reveal(t) {
     if (st.fired || !t) return;
     st.fired = true; st.listening = false;
-    if (rec) try { rec.stop(); } catch(e) {}
-    
     navigator.vibrate?.([100, 50, 100]); 
-    
     let url = `https://www.google.com/search?q=${encodeURIComponent(t)}`;
     if (d.md.value === "images") url += "&tbm=isch";
     if (d.md.value === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(t)}`;
-    
     location.replace(url);
 }
 
 d.bl.onclick = () => { if (!st.fired && st.words.length) reveal(st.words[st.words.length - 1]); };
-
 d.bt.onclick = () => {
     localStorage.v_s = d.s.value; localStorage.v_e = d.e.value; localStorage.v_m = d.md.value;
     d.m.style.display = "none"; d.bl.style.display = "block";
