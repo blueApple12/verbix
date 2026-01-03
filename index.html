@@ -56,36 +56,47 @@ if (SR) {
         if (st.fired) return;
         st.lastHit = Date.now();
         let transcript = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+        let isFinal = false;
+
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            // Restore Confidence Filtering
+            if (e.results[i][0].confidence > 0.3) {
+                transcript += e.results[i][0].transcript;
+                if (e.results[i].isFinal) isFinal = true;
+            }
+        }
+        
         const txt = transcript.toLowerCase().replace(/[.,!?״"']/g, "").trim();
+        if (!txt) return;
         const words = txt.split(/\s+/);
+        const sT = $('s').value.toLowerCase().split(",").map(x => x.trim()).filter(Boolean);
+        const eT = $('e').value.toLowerCase().split(",").map(x => x.trim()).filter(Boolean);
 
-        const starts = $('s').value.toLowerCase().split(",").map(x => x.trim()).filter(Boolean);
-        const ends = $('e').value.toLowerCase().split(",").map(x => x.trim()).filter(Boolean);
-
-        // Optimization: Single pass check
         for (let i = 0; i < words.length; i++) {
-            for (let ph of starts) {
-                const phWords = ph.split(/\s+/);
-                if (words.slice(i, i + phWords.length).join(" ") === ph) {
-                    const target = words[i + phWords.length];
+            // Start triggers can be interim (speed)
+            for (let ph of sT) {
+                const phW = ph.split(/\s+/);
+                if (words.slice(i, i + phW.length).join(" ") === ph) {
+                    const target = words[i + phW.length];
                     if (target) return reveal(target);
                 }
             }
-            for (let ph of ends) {
-                const phWords = ph.split(/\s+/);
-                if (words.slice(i, i + phWords.length).join(" ") === ph) {
-                    const target = words[i - 1];
-                    if (target) return reveal(target);
+            // End triggers MUST be isFinal (safety)
+            if (isFinal) {
+                for (let ph of eT) {
+                    const phW = ph.split(/\s+/);
+                    if (words.slice(i, i + phW.length).join(" ") === ph) {
+                        const target = words[i - 1];
+                        if (target) return reveal(target);
+                    }
                 }
             }
         }
     };
     
     const pulse = () => { 
-        const silentTooLong = (Date.now() - st.lastHit) > 3000;
-        if (st.listening && !st.fired && silentTooLong) {
-            try { rec.stop(); } catch(e) {} // onend will trigger restart
+        if (st.listening && !st.fired && (Date.now() - st.lastHit) > 3000) {
+            try { rec.stop(); } catch(e) {}
         }
     };
     rec.onend = () => { if (st.listening && !st.fired) try { rec.start(); } catch(e) {} };
