@@ -44,7 +44,7 @@ window.onresize = resize; resize();
 class Particle {
     constructor() { this.reset(); }
     reset() { this.x = Math.random()*cvs.width; this.y = Math.random()*cvs.height; this.r = Math.random()*2.5; this.v = Math.random()*0.7+0.1; this.o = Math.random()*0.7; }
-    draw() { this.y -= this.v; this.o -= 0.003; if (this.y < 0 || this.o <= 0) this.reset(); ctx.fillStyle = `rgba(255,204,128,${this.o})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,7); ctx.fill(); }
+    draw() { this.y -= this.v; this.o -= 0.003; if (this.y < 0 || this.o <= 0) this.reset(); ctx.fillStyle = `rgba(255,204,128,${this.o})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill(); }
 }
 const pts = Array.from({length: 150}, () => new Particle());
 (function anim() { ctx.clearRect(0,0,cvs.width,cvs.height); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
@@ -64,15 +64,13 @@ if (SR) {
         const ends = $('e').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
 
         for (let ph of starts) {
-            const re = new RegExp(`\\b${esc(ph)}\\b`);
-            if (re.test(cleanText)) {
+            if (new RegExp(`\\b${esc(ph)}\\b`).test(cleanText)) {
                 const target = cleanText.split(ph).pop().trim().split(/\s+/)[0];
                 if (target?.length > 2) return reveal(target);
             }
         }
         for (let ph of ends) {
-            const re = new RegExp(`\\b${esc(ph)}\\b`);
-            if (re.test(cleanText)) {
+            if (new RegExp(`\\b${esc(ph)}\\b`).test(cleanText)) {
                 const parts = cleanText.split(ph);
                 const before = parts[parts.length - 2]?.trim().split(/\s+/);
                 const target = before ? before[before.length - 1] : null;
@@ -80,7 +78,10 @@ if (SR) {
             }
         }
     };
-    rec.onend = () => st.listening && (try { rec.start(); } catch(e) {});
+    rec.onend = () => {
+        if (!st.listening) return;
+        try { rec.start(); } catch(e) {}
+    };
 }
 
 function reveal(t) {
