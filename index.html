@@ -53,35 +53,55 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec;
 
 if (SR) {
-    rec = new SR(); rec.lang = "he-IL"; rec.continuous = true; rec.interimResults = true;
+    rec = new SR(); 
+    rec.lang = "he-IL"; 
+    rec.continuous = true; 
+    rec.interimResults = true;
+    rec.maxAlternatives = 1; // Faster processing for street use
+
     rec.onresult = e => {
         if (st.fired) return;
         let transcript = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) transcript += e.results[i][0].transcript;
-        const cleanText = transcript.toLowerCase().replace(/[.,!?״"']/g, "").trim();
-
-        const starts = $('s').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
-        const ends = $('e').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
-
-        for (let ph of starts) {
-            if (new RegExp(`\\b${esc(ph)}\\b`).test(cleanText)) {
-                const target = cleanText.split(ph).pop().trim().split(/\s+/)[0];
-                if (target?.length > 2) return reveal(target);
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            // Street Optimization: Only accept results with reasonable confidence
+            if (e.results[i][0].confidence > 0.3) {
+                transcript += e.results[i][0].transcript;
+                // If phone is "Certain" (isFinal), process immediately
+                if (e.results[i].isFinal) process(transcript.toLowerCase());
             }
         }
-        for (let ph of ends) {
-            if (new RegExp(`\\b${esc(ph)}\\b`).test(cleanText)) {
-                const parts = cleanText.split(ph);
-                const before = parts[parts.length - 2]?.trim().split(/\s+/);
-                const target = before ? before[before.length - 1] : null;
-                if (target?.length > 2) return reveal(target);
-            }
+        process(transcript.toLowerCase());
+    };
+
+    rec.onerror = () => { if (st.listening) restartRec(); };
+    rec.onend = () => { if (st.listening) restartRec(); };
+}
+
+function restartRec() {
+    try { rec.stop(); } catch(e) {}
+    setTimeout(() => { try { rec.start(); } catch(e) {} }, 100);
+}
+
+function process(txt) {
+    if (st.fired || !txt) return;
+    const clean = txt.replace(/[.,!?״"']/g, "").trim();
+    const sTrig = $('s').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+    const eTrig = $('e').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+
+    for (let ph of sTrig) {
+        if (new RegExp(`\\b${esc(ph)}\\b`).test(clean)) {
+            const target = clean.split(ph).pop().trim().split(/\s+/)[0];
+            if (target?.length > 2) return reveal(target);
         }
-    };
-    rec.onend = () => {
-        if (!st.listening) return;
-        try { rec.start(); } catch(e) {}
-    };
+    }
+    for (let ph of eTrig) {
+        if (new RegExp(`\\b${esc(ph)}\\b`).test(clean)) {
+            const parts = clean.split(ph);
+            const before = parts[parts.length - 2]?.trim().split(/\s+/);
+            const target = before ? before[before.length - 1] : null;
+            if (target?.length > 2) return reveal(target);
+        }
+    }
 }
 
 function reveal(t) {
