@@ -14,7 +14,7 @@
         h1 { font-family: 'Arial Black', sans-serif; font-size: 72px; font-weight: 900; margin: 0; background: linear-gradient(#fff, var(--op), var(--o), #f57c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; -webkit-text-stroke: 1.5px rgba(255,255,255,0.1); filter: drop-shadow(0 6px 30px rgba(255, 183, 77, 0.45)); }
         .pro-tag { position: absolute; top: -18px; left: -28px; font-size: 16px; font-weight: 900; transform: rotate(-14deg); z-index: 15; padding: 5px 14px; background: #000; border: 2px solid var(--o); border-radius: 5px; box-shadow: 0 4px 15px rgba(255,183,77,.5); }
         .pro-tag span { background: linear-gradient(#fff, var(--o)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block; }
-        input, select, button { width: 90%; max-width: 380px; padding: 18px; margin: 10px 0; border-radius: 15px; border: 2px solid var(--o); background: rgba(20,12,5,.9); color: #fff; text-align: center; font-size: 18px; outline: none; transition: .3s; }
+        input, select, button { width: 90%; max-width: 380px; padding: 18px; margin: 10px 0; border-radius: 15px; border: 2px solid var(--o); background: rgba(20,12,5,.9); color: #fff; text-align: center; font-size: 18px; outline: none; }
         select { appearance: none; background: rgba(20,12,5,.9) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23ffb74d' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat left 20px center; padding-left: 50px; color: var(--op); }
         button { margin-top: 40px; background: linear-gradient(#ffd180, #ff8c00); color: #1a0500; font-weight: 900; border: none; animation: p 3s infinite; cursor: pointer; }
         @keyframes p { 0%, 100% { box-shadow: 0 10px 30px rgba(255,140,0,.4); } 50% { box-shadow: 0 10px 50px rgba(255,140,0,.7); } }
@@ -34,17 +34,17 @@
 
 <script>
 const $ = id => document.getElementById(id), cvs = $('c'), ctx = cvs.getContext('2d');
-let state = { listening: false, fired: false };
+let st = { listening: false, fired: false };
 
 const res = () => { cvs.width = innerWidth; cvs.height = innerHeight; };
 window.onresize = res; res();
 
 class Particle {
     constructor() { this.reset(); }
-    reset() { this.x = Math.random()*cvs.width; this.y = Math.random()*cvs.height; this.r = Math.random()*2.5; this.v = Math.random()*0.7+0.1; this.o = Math.random()*0.7; }
-    draw() { this.y -= this.v; this.o -= 0.003; if (this.y < 0 || this.o <= 0) this.reset(); ctx.fillStyle = `rgba(255,204,128,${this.o})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill(); }
+    reset() { this.x = Math.random()*cvs.width; this.y = Math.random()*cvs.height; this.r = Math.random()*1.8; this.v = Math.random()*0.8+0.2; this.o = Math.random()*0.8; }
+    draw() { this.y -= this.v; this.o -= 0.003; if (this.y < 0 || this.o <= 0) this.reset(); ctx.fillStyle = `rgba(255,204,128,${this.o})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,7); ctx.fill(); }
 }
-const pts = Array.from({length: 150}, () => new Particle());
+const pts = Array.from({length: 180}, () => new Particle());
 (function anim() { ctx.clearRect(0,0,cvs.width,cvs.height); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -53,39 +53,38 @@ let rec;
 if (SR) {
     rec = new SR(); rec.lang = "he-IL"; rec.continuous = true; rec.interimResults = true;
     rec.onresult = e => {
-        if (state.fired) return;
+        if (st.fired) return;
         let transcript = "";
         for (let i = e.resultIndex; i < e.results.length; i++) transcript += e.results[i][0].transcript;
-        const cleanText = transcript.toLowerCase().replace(/[.,!?״"']/g, "").trim();
-
+        const txt = transcript.toLowerCase().replace(/[.,!?״"']/g, "").trim();
+        
         const starts = $('s').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
         const ends = $('e').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
 
         for (let ph of starts) {
-            if (cleanText.includes(ph)) {
-                const target = cleanText.split(ph).pop().trim().split(/\s+/)[0];
-                if (target?.length > 2) return reveal(target);
+            let idx = txt.indexOf(ph);
+            if (idx !== -1) {
+                let after = txt.substring(idx + ph.length).trim().split(/\s+/)[0];
+                if (after?.length > 2) return reveal(after);
             }
         }
         for (let ph of ends) {
-            if (cleanText.includes(ph)) {
-                const parts = cleanText.split(ph);
-                const before = parts[parts.length - 2]?.trim().split(/\s+/);
-                const target = before ? before[before.length - 1] : null;
+            let idx = txt.indexOf(ph);
+            if (idx !== -1) {
+                let beforeArr = txt.substring(0, idx).trim().split(/\s+/);
+                let target = beforeArr.pop();
                 if (target?.length > 2) return reveal(target);
             }
         }
     };
     
-    const startMic = () => { if (state.listening && !state.fired) try { rec.start(); } catch(e) {} };
-    rec.onend = startMic;
-    rec.onerror = startMic;
-    // Street Heartbeat: ensures mic stays alive every 2 seconds
-    setInterval(startMic, 2000);
+    const start = () => { if (st.listening && !st.fired) try { rec.start(); } catch(e) {} };
+    rec.onend = start; rec.onerror = start;
+    setInterval(start, 1000);
 }
 
 function reveal(t) {
-    state.fired = true; state.listening = false;
+    st.fired = true; st.listening = false;
     try { rec.stop(); } catch(e) {}
     navigator.vibrate?.([80, 50, 80]); 
     let url = `https://www.google.com/search?q=${encodeURIComponent(t)}`;
@@ -97,14 +96,12 @@ function reveal(t) {
 $('b').onclick = () => {
     localStorage.v_s = $('s').value; localStorage.v_e = $('e').value; localStorage.v_m = $('m').value;
     $('menu').style.display = 'none'; $('blackout').style.display = 'block';
-    state.listening = true; try { rec.start(); } catch(e) {}
+    st.listening = true; try { rec.start(); } catch(e) {}
     navigator.vibrate?.(100);
     document.documentElement.requestFullscreen?.().catch(()=>{});
 };
 
-$('s').value = localStorage.v_s || '';
-$('e').value = localStorage.v_e || '';
-$('m').value = localStorage.v_m || 'web';
+$('s').value = localStorage.v_s || ''; $('e').value = localStorage.v_e || ''; $('m').value = localStorage.v_m || 'web';
 </script>
 </body>
 </html>
