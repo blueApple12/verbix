@@ -9,110 +9,193 @@
         body { margin: 0; background: var(--bg); color: #ffdca8; font-family: system-ui, sans-serif; overflow: hidden; height: 100vh; }
         canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
         #menu { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        h1 { font-size: 70px; margin: 0; font-weight: 900; background: linear-gradient(to bottom, #fff, var(--gold), #4c2b0a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        input { width: 85%; max-width: 380px; padding: 16px; margin: 8px; border-radius: 15px; border: 1px solid #333; background: rgba(10,10,10,.8); color: #fff; text-align: center; font-size: 18px; outline: none; }
-        button { margin-top: 25px; padding: 18px 80px; border-radius: 50px; background: linear-gradient(var(--gold), var(--deep)); color: #000; font-weight: bold; border: none; font-size: 20px; cursor: pointer; }
+        
+        .logo-wrap { position: relative; margin-bottom: 30px; }
+        h1 { 
+            font-size: 70px; margin: 0; letter-spacing: 2px; font-weight: 900; 
+            background: linear-gradient(to bottom, #fff 0%, #ffe0b2 25%, var(--gold) 45%, var(--deep) 50%, var(--gold) 55%, #4c2b0a 100%); 
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+            filter: drop-shadow(0 4px 15px rgba(0,0,0,0.8)); 
+        }
+        .pro-tag { 
+            position: absolute; top: -10px; left: -35px; font-size: 12px; border: 2px solid var(--gold); 
+            padding: 2px 6px; color: var(--gold); transform: rotate(-12deg); font-weight: 900; 
+            background: var(--bg); border-radius: 4px; z-index: 2;
+        }
+
+        input, select { 
+            width: 85%; max-width: 380px; padding: 16px; margin: 8px; border-radius: 15px; 
+            border: 1px solid #333; background: rgba(10,10,10,.8); color: #fff; 
+            text-align: center; font-size: 18px; outline: none; backdrop-filter: blur(10px);
+            appearance: none; -webkit-appearance: none;
+        }
+        
+        select { 
+            border-color: var(--deep); color: var(--gold); font-weight: bold; cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d69a3c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: left 15px center;
+        }
+
+        button { 
+            margin-top: 25px; padding: 18px 80px; border-radius: 50px; 
+            background: linear-gradient(var(--gold), var(--deep)); color: #000; 
+            font-weight: bold; border: none; cursor: pointer; font-size: 20px; transition: .2s; 
+        }
+        button:active { transform: scale(.96); }
         #blackout { position: fixed; inset: 0; background: #000; z-index: 99; display: none; touch-action: none; }
     </style>
 </head>
 <body>
 
 <canvas id="canvas"></canvas>
+
 <div id="menu">
-    <h1>VERBIX</h1>
-    <input id="triggerInput" placeholder="Trigger Word (e.g. נכון)">
+    <div class="logo-wrap"><span class="pro-tag">PRO</span><h1>VERBIX</h1></div>
+    <input id="startWord" placeholder="Trigger Start (comma separated)">
+    <input id="endWord" placeholder="Trigger End (comma separated)">
+    
+    <select id="modeSelect">
+        <option value="web">Google Search</option>
+        <option value="images">Image Reveal</option>
+        <option value="maps">Google Maps</option>
+    </select>
+
     <button id="startBtn">ACTIVATE</button>
 </div>
+
 <div id="blackout"></div>
 
 <script>
 const $ = id => document.getElementById(id);
-const dom = { menu: $("menu"), blackout: $("blackout"), startBtn: $("startBtn"), trigger: $("triggerInput") };
+const dom = { 
+    canvas: $("canvas"), menu: $("menu"), blackout: $("blackout"), 
+    startBtn: $("startBtn"), startWord: $("startWord"), endWord: $("endWord"), mode: $("modeSelect") 
+};
+const ctx = dom.canvas.getContext("2d");
 const vib = p => navigator.vibrate?.(p);
 
-let state = { listening: false, lastWord: "", trigger: "" };
+let state = { 
+    listening: false, 
+    capture: { words: [], triggerIndex: null, direction: "before" },
+    tapCount: 0, 
+    tapTimer: null, 
+    animating: true 
+};
 
-/* --- SPEECH ENGINE --- */
+/* ================== BACKGROUND ANIMATION ================== */
+const resize = () => { dom.canvas.width = innerWidth; dom.canvas.height = innerHeight; };
+window.onresize = resize; resize();
+class Particle {
+    constructor() { this.reset(); }
+    reset() { this.x = Math.random() * innerWidth; this.y = Math.random() * innerHeight; this.r = Math.random() * 2 + 1; this.v = Math.random() * 0.4 + 0.1; this.o = Math.random(); }
+    draw() { this.y -= this.v; this.o -= 0.002; if (this.y < 0 || this.o <= 0) this.reset(); ctx.fillStyle = `rgba(214,154,60,${this.o})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, 7); ctx.fill(); }
+}
+const pts = Array.from({ length: 50 }, () => new Particle());
+(function anim() { if (state.animating) { ctx.clearRect(0, 0, innerWidth, innerHeight); pts.forEach(p => p.draw()); } requestAnimationFrame(anim); })();
+
+/* ================== SPEECH LOGIC ================== */
+const CLEAN = /[.,!?״"']/g;
+function findTrigger(words, triggers) {
+    for (let i = 0; i < words.length; i++) {
+        for (let t of triggers) {
+            const tWords = t.split(/\s+/);
+            if (words.slice(i, i + tWords.length).join(" ") === t) {
+                return { index: i, length: tWords.length };
+            }
+        }
+    }
+    return null;
+}
+
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec;
 
 if (SR) {
     rec = new SR();
-    rec.lang = "he-IL"; 
-    rec.continuous = true; 
-    rec.interimResults = true;
-
+    rec.lang = "he-IL"; rec.continuous = true; rec.interimResults = true;
     rec.onresult = e => {
-        const transcript = [...e.results].map(r => r[0].transcript).join(" ").toLowerCase();
-        const words = transcript.replace(/[.,!?״"']/g, "").split(/\s+/).filter(Boolean);
+        const text = [...e.results].map(r => r[0].transcript).join(" ").toLowerCase().trim();
+        const words = text.replace(CLEAN, "").split(/\s+/).filter(Boolean);
         
-        if (words.length > 0) {
-            // Always track the very last word for the manual tap safety net
-            state.lastWord = words[words.length - 1];
+        const startTriggers = dom.startWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+        const endTriggers = dom.endWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 
-            // Check for the trigger word
-            if (state.trigger) {
-                const tIndex = words.lastIndexOf(state.trigger);
-                // If trigger is found and there's a word before it
-                if (tIndex > 0) {
-                    reveal(words[tIndex - 1]);
-                }
-            }
+        const startHit = findTrigger(words, startTriggers);
+        const endHit = findTrigger(words, endTriggers);
+
+        if (startHit) {
+            state.capture = { words, triggerIndex: startHit.index + startHit.length, direction: "after" };
+            vib(60); 
+            // Optional: Auto-reveal 1 word if trigger detected? Or wait for tap? 
+            // In standalone afar, we'll reveal the word immediately after the phrase.
+            performReveal(1); 
+        } else if (endHit) {
+            state.capture = { words, triggerIndex: endHit.index, direction: "before" };
+            vib(60);
+            performReveal(1);
+        } else {
+            state.capture = { words, triggerIndex: words.length, direction: "before" };
         }
     };
     rec.onend = () => state.listening && rec.start();
 }
 
-/* --- REVEAL ACTION --- */
-function reveal(word) {
-    if (!word || !state.listening) return;
-    state.listening = false; 
-    vib([60, 100, 60]);
-    
-    // Redirect to real Google
-    location.href = `https://www.google.com/search?q=${encodeURIComponent(word)}`;
-}
-
-/* --- MANUAL TAP SAFETY NET --- */
-dom.blackout.onclick = () => {
-    // If we are on the blackout screen and tap, reveal the last word heard
-    if (state.lastWord) {
-        reveal(state.lastWord);
-    } else {
-        vib(40); // Shorter buzz means "Nothing heard yet"
-    }
-};
-
-/* --- SWIPE UP TO RESET --- */
+/* ================== GESTURES ================== */
 let sY = 0;
 dom.blackout.ontouchstart = e => sY = e.touches[0].clientY;
 dom.blackout.ontouchend = e => {
-    if (sY - e.changedTouches[0].clientY > 100) location.reload();
+    const dy = sY - e.changedTouches[0].clientY;
+    if (dy > 100) return location.reload();
+
+    if (Math.abs(dy) < 20) {
+        if (!state.capture.words.length) return vib(40);
+        state.tapCount++;
+        clearTimeout(state.tapTimer);
+        state.tapTimer = setTimeout(() => {
+            performReveal(state.tapCount);
+            state.tapCount = 0;
+        }, 350);
+    }
 };
 
-/* --- START --- */
+function performReveal(wordCount) {
+    if (!state.listening) return;
+    const { words, triggerIndex, direction } = state.capture;
+    let resultWords = [];
+
+    if (direction === "after") {
+        resultWords = words.slice(triggerIndex, triggerIndex + wordCount);
+    } else {
+        resultWords = words.slice(Math.max(0, triggerIndex - wordCount), triggerIndex);
+    }
+
+    const result = resultWords.join(" ");
+    if (!result) return;
+
+    state.listening = false;
+    if (rec) rec.stop();
+    vib([60, 100, 60]);
+
+    let url = `https://www.google.com/search?q=${encodeURIComponent(result)}`;
+    if (dom.mode.value === "images") url += "&tbm=isch";
+    if (dom.mode.value === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(result)}`;
+    
+    location.href = url;
+}
+
+/* ================== INITIALIZATION ================== */
 dom.startBtn.onclick = () => {
-    state.trigger = dom.trigger.value.trim().toLowerCase();
-    dom.menu.style.display = "none";
-    dom.blackout.style.display = "block";
-    state.listening = true;
-    rec?.start();
-    vib(100);
-    // Try to enter fullscreen for better cover
+    localStorage.v_s = dom.startWord.value;
+    localStorage.v_e = dom.endWord.value;
+    localStorage.v_m = dom.mode.value;
+    dom.menu.style.display = "none"; dom.blackout.style.display = "block";
+    state.listening = true; rec?.start(); vib(100);
     document.documentElement.requestFullscreen?.().catch(()=>{});
 };
 
-/* --- BACKGROUND ANIM --- */
-const ctx = $("canvas").getContext("2d");
-const resize = () => { $("canvas").width = innerWidth; $("canvas").height = innerHeight; };
-window.onresize = resize; resize();
-class P {
-    constructor() { this.reset(); }
-    reset() { this.x = Math.random()*innerWidth; this.y = Math.random()*innerHeight; this.v = Math.random()*0.3+0.1; this.o = Math.random(); }
-    draw() { this.y-=this.v; this.o-=0.002; if(this.o<=0)this.reset(); ctx.fillStyle=`rgba(214,154,60,${this.o})`; ctx.beginPath(); ctx.arc(this.x,this.y,1.5,0,7); ctx.fill(); }
-}
-const pts = Array.from({length:40}, () => new P());
-(function anim(){ ctx.clearRect(0,0,innerWidth,innerHeight); pts.forEach(p=>p.draw()); requestAnimationFrame(anim); })();
+dom.startWord.value = localStorage.v_s || "";
+dom.endWord.value = localStorage.v_e || "";
+dom.mode.value = localStorage.v_m || "web";
 </script>
 </body>
 </html>
