@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+    <title>Verbix PRO</title>
+    <style>
+        :root { 
+            --orange-pop: #ffab40; --orange-mid: #ff6d00; --orange-deep: #d84315; --bg: #050301; 
+        }
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #1a0f05 0%, #000000 100%); 
+            color: #ffdca8; font-family: 'Segoe UI', system-ui, sans-serif; 
+            overflow: hidden; position: fixed;
+        }
+        canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+        #menu { 
+            position: relative; z-index: 10; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; height: 100vh; padding: 20px; box-sizing: border-box;
+        }
+        .logo-wrap { position: relative; margin-bottom: 40px; display: inline-block; }
+        h1 { 
+            font-family: 'Arial Black', sans-serif; font-size: 85px; margin: 0; line-height: 1; 
+            letter-spacing: 1px; text-transform: uppercase;
+            background: linear-gradient(180deg, #ffffff 0%, #ffab40 30%, #ff6d00 60%, #bf360c 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+            filter: drop-shadow(0 4px 25px rgba(255, 109, 0, 0.6));
+        }
+        .pro-tag { 
+            position: absolute; top: -30px; left: -25px; font-size: 20px; font-weight: 900;
+            transform: rotate(-10deg); z-index: 15; padding: 4px 12px;
+            background: rgba(0,0,0,0.9); border-radius: 6px; border: 2px solid #ff6d00;
+            background-image: linear-gradient(180deg, #fff 0%, #ff6d00 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            box-shadow: 0 0 15px rgba(255, 109, 0, 0.4);
+        }
+        input, select { 
+            width: 85%; max-width: 350px; padding: 16px; margin: 10px; border-radius: 12px; 
+            border: 2px solid var(--orange-mid); background: rgba(20, 10, 5, 0.9); color: #fff; 
+            text-align: center; font-size: 17px; backdrop-filter: blur(10px);
+        }
+        button { 
+            margin-top: 35px; padding: 18px; width: 85%; max-width: 350px; border-radius: 50px; 
+            font-size: 20px; font-weight: 800; background: linear-gradient(to bottom, #ff9100, #bf360c); 
+            color: #1a0500; border: 1px solid #ffab40; cursor: pointer;
+            box-shadow: 0 0 30px rgba(255, 109, 0, 0.5);
+        }
+        #blackout { position: fixed; inset: 0; background: #000; z-index: 999; display: none; touch-action: none; }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="menu">
+    <div class="logo-wrap"><div class="pro-tag">PRO</div><h1>VERBIX</h1></div>
+    <input id="sw" placeholder="Start Triggers (e.g. המילה)">
+    <input id="ew" placeholder="End Triggers (e.g. נכון)">
+    <select id="md">
+        <option value="web">Google Reveal</option>
+        <option value="images">Image Reveal</option>
+        <option value="maps">Google Maps</option>
+    </select>
+    <button id="bt">ACTIVATE</button>
+</div>
+<div id="blackout"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const d = { c: $("canvas"), m: $("menu"), bl: $("blackout"), bt: $("bt"), s: $("sw"), e: $("ew"), md: $("md") };
+const ctx = d.c.getContext("2d");
+
+let st = { listening: false, words: [], fired: false };
+
+// Particles 🎇
+const res = () => { d.c.width = innerWidth; d.c.height = innerHeight; };
+window.onresize = res; res();
+class P { constructor() { this.reset(); } reset() { this.x = Math.random()*innerWidth; this.y = Math.random()*innerHeight; this.r = Math.random()*2; this.v = Math.random()*0.5+0.2; this.o = Math.random()*0.6; } draw() { this.y -= this.v; this.o -= 0.005; if (this.y < 0 || this.o <= 0) this.reset(); ctx.fillStyle = `rgba(255, 140, 0, ${this.o})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,7); ctx.fill(); } }
+const pts = Array.from({length: 45}, () => new P());
+(function anim() { ctx.clearRect(0,0,innerWidth,innerHeight); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
+
+// Super-Fast Recognition ⚡
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec;
+if (SR) {
+    rec = new SR();
+    rec.lang = "he-IL";
+    rec.continuous = true;
+    rec.interimResults = true; // Key for <1s speed
+
+    rec.onresult = e => {
+        if (st.fired) return;
+        let tr = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            tr += e.results[i][0].transcript;
+        }
+        const txt = tr.toLowerCase().trim().replace(/[.,!?״"']/g, "");
+        if (!txt) return;
+        st.words = txt.split(/\s+/).filter(Boolean);
+
+        const sL = d.s.value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+        const eL = d.e.value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+
+        // Instant Start Logic
+        for (let ph of sL) {
+            if (txt.includes(ph)) {
+                const parts = txt.split(ph);
+                const target = parts[parts.length - 1].trim().split(/\s+/)[0];
+                if (target) return reveal(target);
+            }
+        }
+        // Instant End Logic
+        for (let ph of eL) {
+            if (txt.includes(ph)) {
+                const parts = txt.split(ph);
+                const before = parts[parts.length - 2]?.trim().split(/\s+/);
+                if (before?.length) return reveal(before[before.length - 1]);
+            }
+        }
+    };
+    const restart = () => { if (st.listening && !st.fired) try { rec.start(); } catch(e) {} };
+    rec.onerror = restart; rec.onend = restart;
+}
+
+function reveal(t) {
+    if (st.fired) return;
+    st.fired = true; st.listening = false;
+    navigator.vibrate?.([80, 50, 80]); 
+    let url = `https://www.google.com/search?q=${encodeURIComponent(t)}`;
+    if (d.md.value === "images") url += "&tbm=isch";
+    if (d.md.value === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(t)}`;
+    location.replace(url);
+}
+
+// Manual Fallback 👆
+d.bl.onclick = () => { if (!st.fired && st.words.length) reveal(st.words[st.words.length - 1]); };
+
+d.bt.onclick = () => {
+    localStorage.v_s = d.s.value; localStorage.v_e = d.e.value; localStorage.v_m = d.md.value;
+    d.m.style.display = "none"; d.bl.style.display = "block";
+    st.listening = true; try { rec.start(); } catch(e) {}
+    document.documentElement.requestFullscreen?.().catch(()=>{});
+};
+
+d.s.value = localStorage.v_s || ""; d.e.value = localStorage.v_e || ""; d.md.value = localStorage.v_m || "web";
+</script>
+</body>
+</html>
