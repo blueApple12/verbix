@@ -5,226 +5,70 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <title>Verbix PRO</title>
     <style>
-        :root { 
-            --orange-pop: #ffcc80; 
-            --orange-mid: #ffb74d; 
-            --orange-deep: #fb8c00;
-            --bg-color: #000000; 
-        }
-        
-        html, body {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            background-color: var(--bg-color); overflow: hidden;
-        }
-
-        body { 
-            background: radial-gradient(circle at center, #2b1d0e 0%, #000000 100%); 
-            color: #ffe0b2; 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            position: fixed;
-        }
-
-        canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-
-        #menu { 
-            position: relative; z-index: 10; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            height: 100vh; padding: 20px; box-sizing: border-box;
-        }
-        
-        .logo-wrap { position: relative; margin-bottom: 50px; display: inline-block; }
-
-        h1 { 
-            font-family: 'Arial Black', 'Impact', sans-serif;
-            font-size: 72px; font-weight: 900; margin: 0; line-height: 1; letter-spacing: -1px; 
-            text-transform: uppercase;
-            background: linear-gradient(180deg, #ffffff 0%, #ffe0b2 25%, #ffb74d 50%, #f57c00 100%);
-            -webkit-background-clip: text; 
-            -webkit-text-fill-color: transparent; 
-            -webkit-text-stroke: 1.5px rgba(255,255,255,0.1);
-            filter: drop-shadow(0 6px 30px rgba(255, 183, 77, 0.45));
-            position: relative; z-index: 1; 
-        }
-
-        /* Tag: Restored color, lowered slightly, moved left and rotated */
-        .pro-tag { 
-            position: absolute; 
-            top: -18px; /* Lowered slightly from -22px */
-            left: -28px; /* Moved a bit more left */
-            font-family: 'Arial', sans-serif;
-            font-size: 16px; font-weight: 900; letter-spacing: 1px;
-            transform: rotate(-14deg); /* Slightly more rotation */
-            z-index: 15; padding: 5px 14px;
-            background: #000; border-radius: 5px;
-            border: 2px solid #ffb74d;
-            box-shadow: 0 4px 15px rgba(255, 183, 77, 0.5);
-        }
-
-        .pro-tag span {
-            background-image: linear-gradient(180deg, #fff 0%, #ffb74d 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: block;
-        }
-
-        input, select { 
-            width: 90%; max-width: 380px; padding: 18px; margin: 10px 0; 
-            border-radius: 15px; border: 2px solid var(--orange-mid); 
-            background: rgba(20, 12, 5, 0.9); color: #fff; text-align: center; 
-            font-size: 18px; outline: none; backdrop-filter: blur(12px);
-            transition: all 0.3s ease; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-            box-sizing: border-box;
-        }
-
-        select {
-            cursor: pointer; appearance: none; -webkit-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffb74d' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat; background-position: left 20px center;
-            padding-left: 50px; color: var(--orange-pop);
-        }
-        
-        button { 
-            margin-top: 40px; padding: 20px 0; width: 90%; max-width: 300px;
-            border-radius: 60px; background: linear-gradient(to bottom, #ffd180, #ff8c00); 
-            color: #1a0500; font-weight: 900; letter-spacing: 2px; border: none;
-            cursor: pointer; font-size: 20px; box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4);
-            transition: 0.3s; animation: pulse-glow 3s infinite;
-        }
-
-        @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4); }
-            50% { box-shadow: 0 10px 50px rgba(255, 140, 0, 0.7); }
-        }
-
-        #blackout { position: fixed; inset: 0; background: #000; z-index: 999; display: none; touch-action: none; }
-
-        @media (min-width: 768px) { h1 { font-size: 110px; } }
+        :root { --o: #ffb74d; --op: #ffcc80; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; position: fixed; }
+        body { background: radial-gradient(circle, #2b1d0e, #000); color: #ffe0b2; }
+        canvas { position: fixed; inset: 0; pointer-events: none; }
+        #menu { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; box-sizing: border-box; }
+        .logo-wrap { position: relative; margin-bottom: 50px; }
+        h1 { font-family: 'Arial Black', sans-serif; font-size: 72px; font-weight: 900; margin: 0; background: linear-gradient(#fff, var(--op), var(--o), #f57c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 6px 20px rgba(255,183,77,.4)); }
+        .pro-tag { position: absolute; top: -18px; left: -28px; font-size: 16px; font-weight: 900; transform: rotate(-14deg); z-index: 15; padding: 5px 14px; background: #000; border: 2px solid var(--o); border-radius: 5px; box-shadow: 0 4px 15px rgba(255,183,77,.5); }
+        .pro-tag span { background: linear-gradient(#fff, var(--o)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block; }
+        input, select, button { width: 90%; max-width: 380px; padding: 18px; margin: 10px 0; border-radius: 15px; border: 2px solid var(--o); background: rgba(20,12,5,.9); color: #fff; text-align: center; font-size: 18px; outline: none; transition: .3s; }
+        select { appearance: none; background: rgba(20,12,5,.9) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23ffb74d' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat left 20px center; padding-left: 50px; color: var(--op); }
+        button { margin-top: 40px; background: linear-gradient(#ffd180, #ff8c00); color: #1a0500; font-weight: 900; border: none; animation: p 3s infinite; }
+        @keyframes p { 0%, 100% { box-shadow: 0 10px 30px rgba(255,140,0,.4); } 50% { box-shadow: 0 10px 50px rgba(255,140,0,.7); } }
+        #blackout { position: fixed; inset: 0; background: #000; z-index: 999; display: none; }
     </style>
 </head>
 <body>
-
-<canvas id="canvas"></canvas>
-
+<canvas id="c"></canvas>
 <div id="menu">
-    <div class="logo-wrap">
-        <div class="pro-tag"><span>PRO</span></div>
-        <h1>VERBIX</h1>
-    </div>
-    
-    <input id="startWord" placeholder="Start Phrase">
-    <input id="endWord" placeholder="End Phrase">
-    
-    <select id="modeSelect">
-        <option value="web">Google Reveal</option>
-        <option value="images">Image Reveal</option>
-        <option value="maps">Maps Reveal</option>
-    </select>
-
-    <button id="startBtn">PERFORM</button>
+    <div class="logo-wrap"><div class="pro-tag"><span>PRO</span></div><h1>VERBIX</h1></div>
+    <input id="s" placeholder="Start Phrase">
+    <input id="e" placeholder="End Phrase">
+    <select id="m"><option value="web">Google Reveal</option><option value="images">Image Reveal</option><option value="maps">Maps Reveal</option></select>
+    <button id="b">PERFORM</button>
 </div>
-
 <div id="blackout"></div>
 
 <script>
-const $ = id => document.getElementById(id);
-const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const dom = { 
-    canvas: $("canvas"), menu: $("menu"), blackout: $("blackout"), 
-    startBtn: $("startBtn"), startWord: $("startWord"), endWord: $("endWord"), mode: $("modeSelect") 
-};
-const ctx = dom.canvas.getContext("2d");
+const $ = id => document.getElementById(id), esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), cvs = $('c'), ctx = cvs.getContext('2d');
+let st = { listening: false, fired: false };
 
-let state = { listening: false, fired: false };
+const res = () => { cvs.width = innerWidth; cvs.height = innerHeight; };
+window.onresize = res; res();
 
-/* ================== PARTICLES ================== */
-const resize = () => { dom.canvas.width = window.innerWidth; dom.canvas.height = window.innerHeight; };
-window.addEventListener('resize', resize); resize();
-
-class Particle {
+class P {
     constructor() { this.reset(); }
-    reset() { 
-        this.x = Math.random() * dom.canvas.width; this.y = Math.random() * dom.canvas.height; 
-        this.r = Math.random() * 2.5; this.v = Math.random() * 0.7 + 0.1; this.o = Math.random() * 0.7; 
-    }
-    draw() { 
-        this.y -= this.v; this.o -= 0.003; 
-        if (this.y < 0 || this.o <= 0) this.reset(); 
-        ctx.fillStyle = `rgba(255, 204, 128, ${this.o})`; 
-        ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.fill(); 
-    }
+    reset() { this.x = Math.random()*cvs.width; this.y = Math.random()*cvs.height; this.r = Math.random()*2.5; this.v = Math.random()*0.7+0.1; this.o = Math.random()*0.7; }
+    draw() { this.y -= this.v; this.o -= 0.003; if (this.y < 0 || this.o <= 0) this.reset(); ctx.fillStyle = `rgba(255,204,128,${this.o})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,7); ctx.fill(); }
 }
-const pts = Array.from({ length: 150 }, () => new Particle());
-(function anim() { 
-    ctx.clearRect(0, 0, dom.canvas.width, dom.canvas.height); 
-    pts.forEach(p => p.draw()); requestAnimationFrame(anim); 
-})();
+const pts = Array.from({length: 150}, () => new P());
+(function anim() { ctx.clearRect(0,0,cvs.width,cvs.height); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
 
-/* ================== SPEECH RECOGNITION ================== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec;
-
 if (SR) {
-    rec = new SR();
-    rec.lang = "he-IL"; 
-    rec.continuous = true; 
-    rec.interimResults = true;
-
-    rec.onresult = e => {
-        if (state.fired) return;
-        let transcript = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) transcript += e.results[i][0].transcript;
-        const cleanText = transcript.toLowerCase().replace(/[.,!?״"']/g, "").trim();
-
-        const starts = dom.startWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-        const ends = dom.endWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-
-        for (let phrase of starts) {
-            const re = new RegExp(`\\b${esc(phrase)}\\b`);
-            if (re.test(cleanText)) {
-                const parts = cleanText.split(phrase);
-                const target = parts[parts.length - 1].trim().split(/\s+/)[0];
-                if (target && target.length > 2) return performReveal(target);
+    const rec = new SR(); rec.lang = "he-IL"; rec.continuous = rec.interimResults = true;
+    rec.onresult = ev => {
+        if (st.fired) return;
+        let txt = Array.from(ev.results).map(r => r[0].transcript).join('').toLowerCase().replace(/[.,!?״"']/g, "").trim();
+        const check = (val, isS) => val.split(',').map(p => p.trim().toLowerCase()).filter(Boolean).some(ph => {
+            if (new RegExp(`\\b${esc(ph)}\\b`).test(txt)) {
+                let parts = txt.split(ph), t = isS ? parts.pop().trim().split(' ')[0] : parts[parts.length-2]?.trim().split(' ').pop();
+                if (t?.length > 2) { st.fired = true; navigator.vibrate?.([80,50,80]); location.replace(`https://www.google.com/search?q=${encodeURIComponent(t)}${$('m').value==='images'?'&tbm=isch':$('m').value==='maps'?'&tbm=lcl':''}`); }
             }
-        }
-        for (let phrase of ends) {
-            const re = new RegExp(`\\b${esc(phrase)}\\b`);
-            if (re.test(cleanText)) {
-                const parts = cleanText.split(phrase);
-                const beforeArray = parts[parts.length - 2]?.trim().split(/\s+/);
-                const target = beforeArray ? beforeArray[beforeArray.length - 1] : null;
-                if (target && target.length > 2) return performReveal(target);
-            }
-        }
+        });
+        check($('s').value, 1) || check($('e').value, 0);
     };
-    rec.onend = () => { if (state.listening) try { rec.start(); } catch(err) {} };
+    rec.onend = () => st.listening && rec.start();
+    $('b').onclick = () => {
+        ['s','e','m'].forEach(k => localStorage['v_'+k] = $(k).value);
+        $('menu').style.display = 'none'; $('blackout').style.display = 'block';
+        st.listening = true; rec.start(); navigator.vibrate?.(100); document.documentElement.requestFullscreen?.();
+    };
 }
-
-function performReveal(target) {
-    if (state.fired) return;
-    state.fired = true; state.listening = false;
-    try { rec.stop(); } catch(e) {}
-    navigator.vibrate?.([80, 50, 80]); 
-    let url = `https://www.google.com/search?q=${encodeURIComponent(target)}`;
-    if (dom.mode.value === "images") url += "&tbm=isch";
-    if (dom.mode.value === "maps") url += "&tbm=lcl";
-    location.replace(url);
-}
-
-dom.startBtn.onclick = () => {
-    localStorage.v_s = dom.startWord.value;
-    localStorage.v_e = dom.endWord.value;
-    localStorage.v_m = dom.mode.value;
-    dom.menu.style.display = "none"; 
-    dom.blackout.style.display = "block";
-    state.listening = true; 
-    try { rec.start(); } catch(e) {}
-    navigator.vibrate?.(100);
-    document.documentElement.requestFullscreen?.().catch(()=>{});
-};
-
-dom.startWord.value = localStorage.v_s || "";
-dom.endWord.value = localStorage.v_e || "";
-dom.mode.value = localStorage.v_m || "web";
+['s','e','m'].forEach(k => $(k).value = localStorage['v_'+k] || '');
 </script>
 </body>
 </html>
