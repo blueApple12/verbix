@@ -30,12 +30,6 @@
             appearance: none; -webkit-appearance: none;
         }
         
-        select { 
-            border-color: var(--deep); color: var(--gold); font-weight: bold; cursor: pointer;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d69a3c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat; background-position: left 15px center;
-        }
-
         button { 
             margin-top: 25px; padding: 18px 80px; border-radius: 50px; 
             background: linear-gradient(var(--gold), var(--deep)); color: #000; 
@@ -51,8 +45,8 @@
 
 <div id="menu">
     <div class="logo-wrap"><span class="pro-tag">PRO</span><h1>VERBIX</h1></div>
-    <input id="startWord" placeholder="Trigger Start (comma separated)">
-    <input id="endWord" placeholder="Trigger End (comma separated)">
+    <input id="startWord" placeholder="Trigger Start (e.g. המילה)">
+    <input id="endWord" placeholder="Trigger End (e.g. נכון)">
     
     <select id="modeSelect">
         <option value="web">Google Search</option>
@@ -76,10 +70,9 @@ const vib = p => navigator.vibrate?.(p);
 
 let state = { 
     listening: false, 
-    capture: { words: [], triggerIndex: null, direction: "before" },
+    lastHeard: [],
     tapCount: 0, 
-    tapTimer: null, 
-    animating: true 
+    tapTimer: null
 };
 
 /* ================== BACKGROUND ANIMATION ================== */
@@ -91,96 +84,73 @@ class Particle {
     draw() { this.y -= this.v; this.o -= 0.002; if (this.y < 0 || this.o <= 0) this.reset(); ctx.fillStyle = `rgba(214,154,60,${this.o})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, 7); ctx.fill(); }
 }
 const pts = Array.from({ length: 50 }, () => new Particle());
-(function anim() { if (state.animating) { ctx.clearRect(0, 0, innerWidth, innerHeight); pts.forEach(p => p.draw()); } requestAnimationFrame(anim); })();
+(function anim() { ctx.clearRect(0, 0, innerWidth, innerHeight); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
 
-/* ================== SPEECH LOGIC ================== */
-const CLEAN = /[.,!?״"']/g;
-function findTrigger(words, triggers) {
-    for (let i = 0; i < words.length; i++) {
-        for (let t of triggers) {
-            const tWords = t.split(/\s+/);
-            if (words.slice(i, i + tWords.length).join(" ") === t) {
-                return { index: i, length: tWords.length };
-            }
-        }
-    }
-    return null;
-}
-
+/* ================== FAST SPEECH LOGIC ================== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec;
 
 if (SR) {
     rec = new SR();
-    rec.lang = "he-IL"; rec.continuous = true; rec.interimResults = true;
+    rec.lang = "he-IL"; 
+    rec.continuous = true; 
+    rec.interimResults = true; // CRITICAL for speed
+
     rec.onresult = e => {
-        const text = [...e.results].map(r => r[0].transcript).join(" ").toLowerCase().trim();
-        const words = text.replace(CLEAN, "").split(/\s+/).filter(Boolean);
+        // We take the latest part of the transcript for instant processing
+        const result = e.results[e.results.length - 1];
+        const text = result[0].transcript.toLowerCase().trim().replace(/[.,!?״"']/g, "");
+        const words = text.split(/\s+/).filter(Boolean);
         
-        const startTriggers = dom.startWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-        const endTriggers = dom.endWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+        state.lastHeard = words; // Backup for manual tap
 
-        const startHit = findTrigger(words, startTriggers);
-        const endHit = findTrigger(words, endTriggers);
+        const starts = dom.startWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+        const ends = dom.endWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 
-        if (startHit) {
-            state.capture = { words, triggerIndex: startHit.index + startHit.length, direction: "after" };
-            vib(60); 
-            // Optional: Auto-reveal 1 word if trigger detected? Or wait for tap? 
-            // In standalone afar, we'll reveal the word immediately after the phrase.
-            performReveal(1); 
-        } else if (endHit) {
-            state.capture = { words, triggerIndex: endHit.index, direction: "before" };
-            vib(60);
-            performReveal(1);
-        } else {
-            state.capture = { words, triggerIndex: words.length, direction: "before" };
+        // Instant Start Trigger Check
+        for (let t of starts) {
+            let idx = words.lastIndexOf(t);
+            if (idx !== -1 && idx < words.length - 1) {
+                return performReveal(words[idx + 1]);
+            }
+        }
+
+        // Instant End Trigger Check
+        for (let t of ends) {
+            let idx = words.lastIndexOf(t);
+            if (idx > 0) {
+                return performReveal(words[idx - 1]);
+            }
         }
     };
     rec.onend = () => state.listening && rec.start();
 }
 
-/* ================== GESTURES ================== */
-let sY = 0;
-dom.blackout.ontouchstart = e => sY = e.touches[0].clientY;
-dom.blackout.ontouchend = e => {
-    const dy = sY - e.changedTouches[0].clientY;
-    if (dy > 100) return location.reload();
-
-    if (Math.abs(dy) < 20) {
-        if (!state.capture.words.length) return vib(40);
-        state.tapCount++;
-        clearTimeout(state.tapTimer);
-        state.tapTimer = setTimeout(() => {
-            performReveal(state.tapCount);
-            state.tapCount = 0;
-        }, 350);
-    }
+/* ================== GESTURES & REVEAL ================== */
+dom.blackout.onclick = () => {
+    if (!state.lastHeard.length) return vib(40);
+    // Manual tap takes the very last word heard instantly
+    performReveal(state.lastHeard[state.lastHeard.length - 1]);
 };
 
-function performReveal(wordCount) {
-    if (!state.listening) return;
-    const { words, triggerIndex, direction } = state.capture;
-    let resultWords = [];
+// Swipe up to Reset
+let sY = 0;
+dom.blackout.ontouchstart = e => sY = e.touches[0].clientY;
+dom.blackout.ontouchend = e => { if (sY - e.changedTouches[0].clientY > 100) location.reload(); };
 
-    if (direction === "after") {
-        resultWords = words.slice(triggerIndex, triggerIndex + wordCount);
-    } else {
-        resultWords = words.slice(Math.max(0, triggerIndex - wordCount), triggerIndex);
-    }
-
-    const result = resultWords.join(" ");
-    if (!result) return;
-
-    state.listening = false;
+function performReveal(targetWord) {
+    if (!state.listening || !targetWord) return;
+    
+    state.listening = false; // Kill listener immediately
     if (rec) rec.stop();
     vib([60, 100, 60]);
 
-    let url = `https://www.google.com/search?q=${encodeURIComponent(result)}`;
+    let url = `https://www.google.com/search?q=${encodeURIComponent(targetWord)}`;
     if (dom.mode.value === "images") url += "&tbm=isch";
-    if (dom.mode.value === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(result)}`;
+    if (dom.mode.value === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(targetWord)}`;
     
-    location.href = url;
+    // location.replace is faster and deletes history so they can't click "back"
+    location.replace(url);
 }
 
 /* ================== INITIALIZATION ================== */
