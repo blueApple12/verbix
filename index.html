@@ -6,16 +6,17 @@
     <title>Verbix PRO</title>
     <style>
         :root { 
-            --orange-pop: #ffab40;
-            --orange-mid: #ff6d00;
-            --orange-deep: #d84315;
+            /* Lightened orange palette to match requested mode-text style */
+            --orange-pop: #ffcc80; 
+            --orange-mid: #ffb74d; 
+            --orange-deep: #fb8c00;
             --bg: #050301; 
         }
         
         body { 
             margin: 0; 
-            background: radial-gradient(circle at center, #1a0f05 0%, #000000 100%); 
-            color: #ffdca8; 
+            background: radial-gradient(circle at center, #2b1d0e 0%, #000000 100%); 
+            color: #ffe0b2; 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             overflow: hidden; 
             height: 100vh; 
@@ -46,10 +47,11 @@
             line-height: 1;
             letter-spacing: 1px; 
             text-transform: uppercase;
-            background: linear-gradient(180deg, #ffffff 0%, #ffab40 30%, #ff6d00 60%, #bf360c 100%);
+            /* Lightened gradient for a more golden-orange feel */
+            background: linear-gradient(180deg, #ffffff 0%, #ffe0b2 25%, #ffb74d 50%, #f57c00 100%);
             -webkit-background-clip: text; 
             -webkit-text-fill-color: transparent; 
-            filter: drop-shadow(0 4px 25px rgba(255, 109, 0, 0.5));
+            filter: drop-shadow(0 4px 25px rgba(255, 183, 77, 0.4));
         }
 
         .pro-tag { 
@@ -65,11 +67,11 @@
             padding: 4px 10px;
             background: rgba(0,0,0,0.8);
             border-radius: 6px;
-            background-image: linear-gradient(180deg, #fff 0%, #ff6d00 100%);
+            background-image: linear-gradient(180deg, #fff 0%, #ffb74d 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            border: 2px solid #ff6d00;
-            box-shadow: 0 0 10px rgba(255, 109, 0, 0.3);
+            border: 2px solid #ffb74d;
+            box-shadow: 0 0 10px rgba(255, 183, 77, 0.3);
         }
 
         input, select { 
@@ -79,20 +81,20 @@
             margin: 10px; 
             border-radius: 12px; 
             border: 2px solid var(--orange-mid); 
-            background: rgba(20, 10, 5, 0.85); 
+            background: rgba(30, 20, 10, 0.85); 
             color: #fff; 
             text-align: center; 
             font-size: 16px; 
             outline: none; 
             backdrop-filter: blur(8px);
             transition: all 0.3s ease;
-            box-shadow: 0 0 15px rgba(255, 109, 0, 0.1);
+            box-shadow: 0 0 15px rgba(255, 183, 77, 0.1);
             appearance: none; -webkit-appearance: none;
         }
         
         input:focus, select:focus {
             border-color: #fff;
-            box-shadow: 0 0 20px rgba(255, 109, 0, 0.4);
+            box-shadow: 0 0 20px rgba(255, 183, 77, 0.4);
             transform: scale(1.02);
         }
 
@@ -100,14 +102,14 @@
             margin-top: 35px; 
             padding: 16px 70px; 
             border-radius: 50px; 
-            background: linear-gradient(to bottom, #ff9100, #bf360c); 
+            background: linear-gradient(to bottom, #ffd180, #ffab40); 
             color: #1a0500; 
             font-weight: 800; 
             letter-spacing: 1.5px;
-            border: 1px solid #ffab40; 
+            border: 1px solid #ffe0b2; 
             cursor: pointer; 
             font-size: 19px; 
-            box-shadow: 0 0 25px rgba(255, 109, 0, 0.5);
+            box-shadow: 0 0 25px rgba(255, 171, 64, 0.5);
             transition: transform 0.1s;
         }
         button:active { transform: scale(0.95); }
@@ -154,20 +156,28 @@ let state = {
     fired: false
 };
 
-/* ================== AMBIENT PARTICLES ================== */
+/* ================== DENSE AMBIENT PARTICLES (5x More) ================== */
 const resize = () => { dom.canvas.width = innerWidth; dom.canvas.height = innerHeight; };
 window.onresize = resize; resize();
 class Particle {
     constructor() { this.reset(); }
-    reset() { this.x = Math.random() * innerWidth; this.y = Math.random() * innerHeight; this.r = Math.random() * 2; this.v = Math.random() * 0.5 + 0.2; this.o = Math.random() * 0.6; }
+    reset() { 
+        this.x = Math.random() * innerWidth; 
+        this.y = Math.random() * innerHeight; 
+        this.r = Math.random() * 2.5; // Slightly varied sizes
+        this.v = Math.random() * 0.7 + 0.1; // More varied speeds
+        this.o = Math.random() * 0.7; 
+    }
     draw() { 
-        this.y -= this.v; this.o -= 0.005; 
+        this.y -= this.v; 
+        this.o -= 0.003; 
         if (this.y < 0 || this.o <= 0) this.reset(); 
-        ctx.fillStyle = `rgba(255, 140, 0, ${this.o})`; 
+        ctx.fillStyle = `rgba(255, 204, 128, ${this.o})`; 
         ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.fill(); 
     }
 }
-const pts = Array.from({ length: 45 }, () => new Particle());
+// Increased length to 225 for 5x density
+const pts = Array.from({ length: 225 }, () => new Particle());
 (function anim() { ctx.clearRect(0, 0, innerWidth, innerHeight); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
 
 /* ================== REFINED SPEECH LOGIC ================== */
@@ -188,7 +198,6 @@ if (SR) {
             transcript += e.results[i][0].transcript;
         }
 
-        // AGGRESSIVE TRIMMING
         const cleanText = transcript.toLowerCase().replace(/[.,!?״"']/g, "").trim();
         const words = cleanText.split(/\s+/).filter(Boolean);
         state.lastWords = words;
@@ -201,7 +210,6 @@ if (SR) {
                 const parts = cleanText.split(phrase);
                 const after = parts[parts.length - 1].trim().split(/\s+/);
                 const target = after[0];
-                // JUNK WORD FILTER
                 if (target && target.length > 2) return performReveal(target);
             }
         }
@@ -211,7 +219,6 @@ if (SR) {
                 const parts = cleanText.split(phrase);
                 const before = parts[parts.length - 2]?.trim().split(/\s+/);
                 const target = before ? before[before.length - 1] : null;
-                // JUNK WORD FILTER
                 if (target && target.length > 2) return performReveal(target);
             }
         }
@@ -225,7 +232,7 @@ if (SR) {
 dom.blackout.onclick = () => {
     if (state.fired || !state.lastWords.length) return vib(40);
     const target = state.lastWords[state.lastWords.length - 1];
-    if (target && target.length > 2) performReveal(target); // Manual tap junk filter
+    if (target && target.length > 2) performReveal(target);
 };
 
 let sY = 0;
