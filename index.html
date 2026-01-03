@@ -6,60 +6,100 @@
     <title>Verbix PRO</title>
     <style>
         :root { 
-            --orange-pop: #ffcc80; --orange-mid: #ffb74d; --orange-deep: #fb8c00; --bg-color: #000000; 
+            --orange-pop: #ffcc80; 
+            --orange-mid: #ffb74d; 
+            --orange-deep: #fb8c00;
+            --bg-color: #000000; 
         }
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: var(--bg-color); overflow: hidden; }
+        
+        html, body {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--bg-color); overflow: hidden;
+        }
+
         body { 
             background: radial-gradient(circle at center, #2b1d0e 0%, #000000 100%); 
-            color: #ffe0b2; font-family: 'Segoe UI', system-ui, sans-serif; position: fixed;
+            color: #ffe0b2; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            position: fixed;
         }
+
         canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
         #menu { 
             position: relative; z-index: 10; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; height: 100vh; padding: 20px; box-sizing: border-box;
+            align-items: center; justify-content: center; height: 100vh; padding: 20px;
+            box-sizing: border-box;
         }
+        
         .logo-wrap { position: relative; margin-bottom: 50px; display: inline-block; }
+
         h1 { 
             font-family: 'Arial Black', sans-serif; font-size: 72px; font-weight: 900;
             margin: 0; line-height: 1; letter-spacing: -1px; text-transform: uppercase;
             background: linear-gradient(180deg, #ffffff 0%, #ffe0b2 25%, #ffb74d 50%, #f57c00 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
-            -webkit-text-stroke: 1.5px rgba(255,255,255,0.1); filter: drop-shadow(0 6px 30px rgba(255, 183, 77, 0.45));
+            -webkit-text-stroke: 1.5px rgba(255,255,255,0.1);
+            filter: drop-shadow(0 6px 30px rgba(255, 183, 77, 0.45));
         }
+
         .pro-tag { 
             position: absolute; top: -20px; left: -15px; font-size: 16px; font-weight: 900;
             transform: rotate(-8deg); z-index: 15; padding: 5px 14px;
-            background: #000; border-radius: 5px; border: 2px solid #ffb74d; box-shadow: 0 4px 15px rgba(255, 183, 77, 0.5);
+            background: #000; border-radius: 5px; border: 2px solid #ffb74d;
+            box-shadow: 0 4px 15px rgba(255, 183, 77, 0.5);
         }
-        .pro-tag span { background-image: linear-gradient(180deg, #fff 0%, #ffb74d 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .pro-tag span {
+            background-image: linear-gradient(180deg, #fff 0%, #ffb74d 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
         input, select { 
-            width: 90%; max-width: 380px; padding: 18px; margin: 10px 0; border-radius: 15px; 
-            border: 2px solid var(--orange-mid); background: rgba(20, 12, 5, 0.9); color: #fff; 
-            text-align: center; font-size: 18px; outline: none; backdrop-filter: blur(12px); box-sizing: border-box;
+            width: 90%; max-width: 380px; padding: 18px; margin: 10px 0; 
+            border-radius: 15px; border: 2px solid var(--orange-mid); 
+            background: rgba(20, 12, 5, 0.9); color: #fff; text-align: center; 
+            font-size: 18px; outline: none; backdrop-filter: blur(12px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6); box-sizing: border-box;
         }
-        select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke='%23ffb74d' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: left 20px center; padding-left: 50px; }
+
+        select {
+            cursor: pointer; appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffb74d' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: left 20px center; padding-left: 50px;
+        }
+        
         button { 
-            margin-top: 40px; padding: 20px 0; width: 90%; max-width: 300px; border-radius: 60px; 
-            background: linear-gradient(to bottom, #ffd180, #ff8c00); color: #1a0500; font-weight: 900; 
-            border: none; cursor: pointer; font-size: 20px; box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4); animation: pulse 3s infinite;
+            margin-top: 40px; padding: 20px 0; width: 90%; max-width: 300px;
+            border-radius: 60px; background: linear-gradient(to bottom, #ffd180, #ff8c00); 
+            color: #1a0500; font-weight: 900; border: none; cursor: pointer; font-size: 20px; 
+            box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4); animation: pulse-glow 3s infinite;
         }
-        @keyframes pulse { 0%, 100% { box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4); } 50% { box-shadow: 0 10px 50px rgba(255, 140, 0, 0.7); } }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4); }
+            50% { box-shadow: 0 10px 50px rgba(255, 140, 0, 0.7); }
+        }
+
         #blackout { position: fixed; inset: 0; background: #000; z-index: 999; display: none; }
     </style>
 </head>
 <body>
+
 <canvas id="canvas"></canvas>
+
 <div id="menu">
     <div class="logo-wrap"><div class="pro-tag"><span>PRO</span></div><h1>VERBIX</h1></div>
-    <input id="startWord" placeholder="Listen AFTER phrase">
-    <input id="endWord" placeholder="Listen BEFORE phrase">
+    <input id="startWord" placeholder="Phrases to listen AFTER">
+    <input id="endWord" placeholder="Phrases to listen BEFORE">
     <select id="modeSelect">
-        <option value="web">Google Reveal</option>
-        <option value="images">Image Reveal</option>
-        <option value="maps">Maps Reveal</option>
+        <option value="web">Google Search</option>
+        <option value="images">Image Search</option>
+        <option value="maps">Maps Search</option>
     </select>
     <button id="startBtn">PERFORM</button>
 </div>
+
 <div id="blackout"></div>
 
 <script>
@@ -70,59 +110,70 @@ const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 let state = { listening: false, fired: false };
 
+/* ================== VISUALS ================== */
 const resize = () => { dom.canvas.width = window.innerWidth; dom.canvas.height = window.innerHeight; };
-window.onresize = resize; resize();
-class P {
-    constructor() { this.reset(); }
-    reset() { this.x = Math.random()*dom.canvas.width; this.y = Math.random()*dom.canvas.height; this.r = Math.random()*2.5; this.v = Math.random()*0.7+0.1; this.o = Math.random()*0.7; }
-    draw() { this.y -= this.v; this.o -= 0.003; if (this.y < 0 || this.o <= 0) this.reset(); ctx.fillStyle = `rgba(255,204,128,${this.o})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,7); ctx.fill(); }
-}
-const pts = Array.from({ length: 200 }, () => new P());
-(function anim() { ctx.clearRect(0,0,dom.canvas.width,dom.canvas.height); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
+window.addEventListener('resize', resize); resize();
 
+class Particle {
+    constructor() { this.reset(); }
+    reset() { this.x = Math.random() * dom.canvas.width; this.y = Math.random() * dom.canvas.height; this.r = Math.random() * 2.5; this.v = Math.random() * 0.7 + 0.1; this.o = Math.random() * 0.7; }
+    draw() { this.y -= this.v; this.o -= 0.003; if (this.y < 0 || this.o <= 0) this.reset(); ctx.fillStyle = `rgba(255, 204, 128, ${this.o})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, 7); ctx.fill(); }
+}
+const pts = Array.from({ length: 200 }, () => new Particle());
+(function anim() { ctx.clearRect(0, 0, dom.canvas.width, dom.canvas.height); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
+
+/* ================== SPEECH ================== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec;
 
 if (SR) {
     rec = new SR();
-    rec.lang = "he-IL"; rec.continuous = true; rec.interimResults = true;
+    rec.lang = "he-IL"; 
+    rec.continuous = true; 
+    rec.interimResults = true;
 
     rec.onresult = e => {
         if (state.fired) return;
         let transcript = "";
         for (let i = e.resultIndex; i < e.results.length; i++) {
-            if (e.results[i][0].confidence > 0.25) transcript += e.results[i][0].transcript;
+            if (e.results[i][0].confidence > 0.3) transcript += e.results[i][0].transcript;
         }
-        const clean = transcript.toLowerCase().replace(/[.,!?״"']/g, "").trim();
-        if (!clean) return;
+        
+        const cleanText = transcript.toLowerCase().replace(/[.,!?״"']/g, "").trim();
+        if (!cleanText) return;
 
-        const sL = dom.startWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-        const eL = dom.endWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+        const sList = dom.startWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+        const eList = dom.endWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 
-        for (let ph of sL) {
+        // Logic 1: Look for Target AFTER Start Phrase
+        for (let ph of sList) {
             const re = new RegExp(`(?:^|\\s)${esc(ph)}(?:\\s|$)`, 'u');
-            const m = clean.match(re);
+            const m = cleanText.match(re);
             if (m) {
-                const after = clean.substring(clean.indexOf(m[0]) + m[0].length).trim();
+                const after = cleanText.substring(cleanText.indexOf(m[0]) + m[0].length).trim();
                 const target = after.split(/\s+/)[0];
-                if (target) return reveal(target);
+                if (target && target.length >= 1) return performReveal(target);
             }
         }
-        for (let ph of eL) {
+
+        // Logic 2: Look for Target BEFORE End Phrase
+        for (let ph of eList) {
             const re = new RegExp(`(?:^|\\s)${esc(ph)}(?:\\s|$)`, 'u');
-            const m = clean.match(re);
+            const m = cleanText.match(re);
             if (m) {
-                const beforeStr = clean.substring(0, clean.indexOf(m[0])).trim();
-                const target = beforeStr.split(/\s+/).pop();
-                if (target) return reveal(target);
+                const beforeStr = cleanText.substring(0, cleanText.indexOf(m[0])).trim();
+                const beforeArr = beforeStr.split(/\s+/);
+                const target = beforeArr[beforeArr.length - 1];
+                if (target && target.length >= 1) return performReveal(target);
             }
         }
     };
+
     const restart = () => { if (state.listening && !state.fired) try { rec.start(); } catch(e) {} };
     rec.onend = restart; rec.onerror = restart;
 }
 
-function reveal(target) {
+function performReveal(target) {
     state.fired = true; state.listening = false;
     navigator.vibrate?.([80, 50, 80]); 
     let url = `https://www.google.com/search?q=${encodeURIComponent(target)}`;
@@ -132,13 +183,18 @@ function reveal(target) {
 }
 
 dom.startBtn.onclick = () => {
-    localStorage.v_s = dom.startWord.value; localStorage.v_e = dom.endWord.value; localStorage.v_m = dom.mode.value;
+    localStorage.v_s = dom.startWord.value;
+    localStorage.v_e = dom.endWord.value;
+    localStorage.v_m = dom.mode.value;
     dom.menu.style.display = "none"; dom.blackout.style.display = "block";
     state.listening = true; try { rec.start(); } catch(e) {}
     navigator.vibrate?.(100);
     document.documentElement.requestFullscreen?.().catch(()=>{});
 };
-dom.startWord.value = localStorage.v_s || ""; dom.endWord.value = localStorage.v_e || ""; dom.mode.value = localStorage.v_m || "web";
+
+dom.startWord.value = localStorage.v_s || "";
+dom.endWord.value = localStorage.v_e || "";
+dom.mode.value = localStorage.v_m || "web";
 </script>
 </body>
 </html>
