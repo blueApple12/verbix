@@ -12,7 +12,7 @@
         canvas { position: fixed; inset: 0; pointer-events: none; }
         #menu { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; }
         .logo-wrap { position: relative; margin-bottom: 50px; }
-        h1 { font-family: 'Arial Black', sans-serif; font-size: 72px; font-weight: 900; margin: 0; background: linear-gradient(#fff, var(--op), var(--o), #f57c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; -webkit-text-stroke: 1.5px rgba(255,255,255,.1); filter: drop-shadow(0 6px 30px rgba(255, 183, 77, 0.45)); }
+        h1 { font-family: 'Arial Black', sans-serif; font-size: 72px; font-weight: 900; margin: 0; background: linear-gradient(#fff, var(--op), var(--o), #f57c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; -webkit-text-stroke: 1.5px rgba(255,255,255,.1); filter: drop-shadow(0 6px 30px rgba(255,183,77,.45)); }
         .pro-tag { position: absolute; top: -18px; left: -28px; font-size: 16px; font-weight: 900; transform: rotate(-14deg); z-index: 15; padding: 5px 14px; background: #000; border: 2px solid var(--o); border-radius: 5px; box-shadow: 0 4px 15px rgba(255,183,77,.5); }
         .pro-tag span { background: linear-gradient(#fff, var(--o)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block; }
         input, select, button { width: 90%; max-width: 380px; padding: 18px; margin: 10px 0; border-radius: 15px; border: 2px solid var(--o); background: rgba(20,12,5,.9); color: #fff; text-align: center; font-size: 18px; outline: none; backdrop-filter: blur(12px); transition: .3s; }
@@ -38,8 +38,8 @@ const $ = id => document.getElementById(id), esc = s => s.replace(/[.*+?^${}()|[
 const cvs = $('c'), ctx = cvs.getContext('2d');
 let st = { listening: false, fired: false };
 
-const res = () => { cvs.width = innerWidth; cvs.height = innerHeight; };
-window.onresize = res; res();
+const resize = () => { cvs.width = innerWidth; cvs.height = innerHeight; };
+window.onresize = resize; resize();
 
 class Particle {
     constructor() { this.reset(); }
@@ -53,71 +53,51 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec;
 
 if (SR) {
-    rec = new SR(); 
-    rec.lang = "he-IL"; 
-    rec.continuous = true; 
-    rec.interimResults = true;
-
+    rec = new SR(); rec.lang = "he-IL"; rec.continuous = true; rec.interimResults = true;
     rec.onresult = e => {
         if (st.fired) return;
         let transcript = "";
-        let isFinal = false;
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-            transcript += e.results[i][0].transcript;
-            if (e.results[i].isFinal) isFinal = true;
+        for (let i = e.resultIndex; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+        const cleanText = transcript.toLowerCase().replace(/[.,!?״"']/g, "").trim();
+
+        const starts = $('s').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+        const ends = $('e').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+
+        for (let ph of starts) {
+            if (new RegExp(`\\b${esc(ph)}\\b`).test(cleanText)) {
+                const target = cleanText.split(ph).pop().trim().split(/\s+/)[0];
+                if (target?.length > 2) return reveal(target);
+            }
         }
-        process(transcript.toLowerCase(), isFinal);
+        for (let ph of ends) {
+            if (new RegExp(`\\b${esc(ph)}\\b`).test(cleanText)) {
+                const parts = cleanText.split(ph);
+                const before = parts[parts.length - 2]?.trim().split(/\s+/);
+                const target = before ? before[before.length - 1] : null;
+                if (target?.length > 2) return reveal(target);
+            }
+        }
     };
-
-    // Robust Restart Logic
-    const startRec = () => { if (st.listening && !st.fired) try { rec.start(); } catch(err) {} };
-    rec.onend = startRec;
-    rec.onerror = startRec;
-    
-    // Heartbeat: Check every 2s if mic died silently
-    setInterval(() => { if (st.listening && !st.fired) startRec(); }, 2000);
-}
-
-function process(txt, final) {
-    if (st.fired || !txt) return;
-    const clean = txt.replace(/[.,!?״"']/g, "").trim();
-    const sTrig = $('s').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
-    const eTrig = $('e').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
-
-    for (let ph of sTrig) {
-        if (new RegExp(`\\b${esc(ph)}\\b`).test(clean)) {
-            const parts = clean.split(ph);
-            const target = parts.pop().trim().split(/\s+/)[0];
-            if (target?.length > 2) return reveal(target);
-        }
-    }
-    for (let ph of eTrig) {
-        if (new RegExp(`\\b${esc(ph)}\\b`).test(clean)) {
-            const parts = clean.split(ph);
-            const wordsBefore = parts[parts.length - 2]?.trim().split(/\s+/);
-            const target = wordsBefore ? wordsBefore.pop() : null;
-            if (target?.length > 2) return reveal(target);
-        }
-    }
+    rec.onend = () => {
+        if (!st.listening) return;
+        try { rec.start(); } catch(e) {}
+    };
 }
 
 function reveal(t) {
     st.fired = true; st.listening = false;
-    try { rec.stop(); } catch(e) {}
+    if (rec) try { rec.stop(); } catch(e) {}
     navigator.vibrate?.([80, 50, 80]); 
     let url = `https://www.google.com/search?q=${encodeURIComponent(t)}`;
-    const m = $('m').value;
-    if (m === "images") url += "&tbm=isch";
-    if (m === "maps") url += "&tbm=lcl";
+    if ($('m').value === "images") url += "&tbm=isch";
+    if ($('m').value === "maps") url += "&tbm=lcl";
     location.replace(url);
 }
 
 $('b').onclick = () => {
     ['s','e','m'].forEach(k => localStorage['v_'+k] = $(k).value);
-    $('menu').style.display = 'none'; 
-    $('blackout').style.display = 'block';
-    st.listening = true;
-    try { rec.start(); } catch(e) {}
+    $('menu').style.display = 'none'; $('blackout').style.display = 'block';
+    st.listening = true; try { rec.start(); } catch(e) {}
     navigator.vibrate?.(100);
     document.documentElement.requestFullscreen?.().catch(()=>{});
 };
