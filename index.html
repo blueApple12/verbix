@@ -33,19 +33,18 @@
 <div id="blackout"></div>
 
 <script>
-const $ = id => document.getElementById(id), esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const cvs = $('c'), ctx = cvs.getContext('2d');
-let st = { listening: false, fired: false };
+const $ = id => document.getElementById(id), cvs = $('c'), ctx = cvs.getContext('2d');
+let st = { listening: false, fired: false, lastHit: Date.now() };
 
 const res = () => { cvs.width = innerWidth; cvs.height = innerHeight; };
 window.onresize = res; res();
 
-class Particle {
+class P {
     constructor() { this.reset(); }
-    reset() { this.x = Math.random()*cvs.width; this.y = Math.random()*cvs.height; this.r = Math.random()*1.8; this.v = Math.random()*0.7+0.2; this.o = Math.random()*0.8; }
+    reset() { this.x = Math.random()*cvs.width; this.y = Math.random()*cvs.height; this.r = Math.random()*1.8; this.v = Math.random()*0.8+0.2; this.o = Math.random()*0.8; }
     draw() { this.y -= this.v; this.o -= 0.003; if (this.y < 0 || this.o <= 0) this.reset(); ctx.fillStyle = `rgba(255,204,128,${this.o})`; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,7); ctx.fill(); }
 }
-const pts = Array.from({length: 180}, () => new Particle());
+const pts = Array.from({length: 150}, () => new P());
 (function anim() { ctx.clearRect(0,0,cvs.width,cvs.height); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -55,36 +54,43 @@ if (SR) {
     rec = new SR(); rec.lang = "he-IL"; rec.continuous = true; rec.interimResults = true;
     rec.onresult = e => {
         if (st.fired) return;
+        st.lastHit = Date.now();
         let transcript = "";
         for (let i = e.resultIndex; i < e.results.length; i++) transcript += e.results[i][0].transcript;
         const txt = transcript.toLowerCase().replace(/[.,!?״"']/g, "").trim();
-        
-        const starts = $('s').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
-        const ends = $('e').value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+        const words = txt.split(/\s+/);
 
-        for (let ph of starts) {
-            const re = new RegExp(`(?:^|\\s)${esc(ph)}(?:\\s|$)`, 'u');
-            const match = txt.match(re);
-            if (match) {
-                const afterStr = txt.substring(txt.indexOf(match[0]) + match[0].length).trim();
-                const target = afterStr.split(/\s+/)[0];
-                if (target?.length >= 2) return reveal(target);
+        const starts = $('s').value.toLowerCase().split(",").map(x => x.trim()).filter(Boolean);
+        const ends = $('e').value.toLowerCase().split(",").map(x => x.trim()).filter(Boolean);
+
+        // Optimization: Single pass check
+        for (let i = 0; i < words.length; i++) {
+            for (let ph of starts) {
+                const phWords = ph.split(/\s+/);
+                if (words.slice(i, i + phWords.length).join(" ") === ph) {
+                    const target = words[i + phWords.length];
+                    if (target) return reveal(target);
+                }
             }
-        }
-        for (let ph of ends) {
-            const re = new RegExp(`(?:^|\\s)${esc(ph)}(?:\\s|$)`, 'u');
-            const match = txt.match(re);
-            if (match) {
-                const beforeStr = txt.substring(0, txt.indexOf(match[0])).trim();
-                const target = beforeStr.split(/\s+/).pop();
-                if (target?.length >= 2) return reveal(target);
+            for (let ph of ends) {
+                const phWords = ph.split(/\s+/);
+                if (words.slice(i, i + phWords.length).join(" ") === ph) {
+                    const target = words[i - 1];
+                    if (target) return reveal(target);
+                }
             }
         }
     };
     
-    const startMic = () => { if (st.listening && !st.fired) try { rec.start(); } catch(e) {} };
-    rec.onend = startMic; rec.onerror = startMic;
-    setInterval(startMic, 1000);
+    const pulse = () => { 
+        const silentTooLong = (Date.now() - st.lastHit) > 3000;
+        if (st.listening && !st.fired && silentTooLong) {
+            try { rec.stop(); } catch(e) {} // onend will trigger restart
+        }
+    };
+    rec.onend = () => { if (st.listening && !st.fired) try { rec.start(); } catch(e) {} };
+    rec.onerror = rec.onend;
+    setInterval(pulse, 1000);
 }
 
 function reveal(t) {
@@ -92,19 +98,20 @@ function reveal(t) {
     try { rec.stop(); } catch(e) {}
     navigator.vibrate?.([80, 50, 80]); 
     let url = `https://www.google.com/search?q=${encodeURIComponent(t)}`;
-    if ($('m').value === "images") url += "&tbm=isch";
-    if ($('m').value === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(t)}`;
+    const mode = $('m').value;
+    if (mode === "images") url += "&tbm=isch";
+    if (mode === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(t)}`;
     location.replace(url);
 }
 
 $('b').onclick = () => {
     localStorage.v_s = $('s').value; localStorage.v_e = $('e').value; localStorage.v_m = $('m').value;
     $('menu').style.display = 'none'; $('blackout').style.display = 'block';
-    st.listening = true; startMic();
+    st.listening = true; st.lastHit = Date.now();
+    try { rec.start(); } catch(e) {}
     navigator.vibrate?.(100);
     document.documentElement.requestFullscreen?.().catch(()=>{});
 };
-const startMic = () => { if (st.listening && !st.fired) try { rec.start(); } catch(e) {} };
 
 $('s').value = localStorage.v_s || ''; $('e').value = localStorage.v_e || ''; $('m').value = localStorage.v_m || 'web';
 </script>
