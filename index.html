@@ -12,6 +12,7 @@
             --bg-color: #000000; 
         }
         
+        /* Fixed Background Issues */
         html, body {
             margin: 0;
             padding: 0;
@@ -25,7 +26,7 @@
             background: radial-gradient(circle at center, #2b1d0e 0%, #000000 100%); 
             color: #ffe0b2; 
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            position: fixed;
+            position: fixed; /* Prevents rubber-banding */
         }
 
         canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
@@ -59,23 +60,23 @@
             background: linear-gradient(180deg, #ffffff 0%, #ffe0b2 25%, #ffb74d 50%, #f57c00 100%);
             -webkit-background-clip: text; 
             -webkit-text-fill-color: transparent; 
+            /* Logo thickness for mobile visibility */
             -webkit-text-stroke: 1.5px rgba(255,255,255,0.1);
             filter: drop-shadow(0 6px 30px rgba(255, 183, 77, 0.45));
             position: relative;
             z-index: 1; 
         }
 
-        /* Adjusted Tag: Moved further left and rotated more to the left */
         .pro-tag { 
             position: absolute; 
-            top: -22px; 
-            left: -25px; /* Moved left from -15px */
+            top: -20px; 
+            left: -15px; 
             font-family: 'Arial', sans-serif;
             font-size: 16px; 
             font-weight: 900;
             letter-spacing: 1px;
-            transform: rotate(-12deg); /* Rotated more from -8deg */
-            z-index: 15; 
+            transform: rotate(-8deg); 
+            z-index: 15; /* Sits ABOVE the H1 */
             padding: 5px 14px;
             background: #000;
             border-radius: 5px;
@@ -224,7 +225,7 @@ const pts = Array.from({ length: 225 }, () => new Particle());
     requestAnimationFrame(anim); 
 })();
 
-/* ================== SPEECH RECOGNITION WITH REFINED REGEX ================== */
+/* ================== SPEECH RECOGNITION ================== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec;
 
@@ -245,18 +246,15 @@ if (SR) {
         const starts = dom.startWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
         const ends = dom.endWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 
-        // Improved stricter matching
         for (let phrase of starts) {
-            const re = new RegExp(`\\b${phrase}\\b`);
-            if (re.test(cleanText)) {
+            if (cleanText.includes(phrase)) {
                 const parts = cleanText.split(phrase);
                 const target = parts[parts.length - 1].trim().split(/\s+/)[0];
                 if (target && target.length > 2) return performReveal(target);
             }
         }
         for (let phrase of ends) {
-            const re = new RegExp(`\\b${phrase}\\b`);
-            if (re.test(cleanText)) {
+            if (cleanText.includes(phrase)) {
                 const parts = cleanText.split(phrase);
                 const before = parts[parts.length - 2]?.trim().split(/\s+/);
                 const target = before ? before[before.length - 1] : null;
