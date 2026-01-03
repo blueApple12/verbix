@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <title>Verbix PRO</title>
     <style>
         :root { 
@@ -16,9 +16,12 @@
             margin: 0; 
             background: radial-gradient(circle at center, #2b1d0e 0%, #000000 100%); 
             color: #ffe0b2; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
             overflow: hidden; 
-            height: 100vh; 
+            height: 100vh;
+            /* Prevents rubber-banding on iOS */
+            position: fixed;
+            width: 100%;
         }
 
         canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
@@ -31,48 +34,51 @@
             align-items: center; 
             justify-content: center; 
             height: 100vh; 
+            padding: 20px;
         }
         
         .logo-wrap { 
             position: relative; 
-            margin-bottom: 40px; 
+            margin-bottom: 50px; 
             display: inline-block;
         }
 
         h1 { 
             font-family: 'Arial Black', 'Impact', sans-serif;
-            font-size: 85px; 
+            font-size: 72px; /* Slightly smaller for mobile safety */
+            font-weight: 900;
             margin: 0; 
             line-height: 1;
-            letter-spacing: 1px; 
+            letter-spacing: -1px; 
             text-transform: uppercase;
             background: linear-gradient(180deg, #ffffff 0%, #ffe0b2 25%, #ffb74d 50%, #f57c00 100%);
             -webkit-background-clip: text; 
             -webkit-text-fill-color: transparent; 
-            filter: drop-shadow(0 4px 25px rgba(255, 183, 77, 0.4));
+            /* Extra thickness for mobile */
+            -webkit-text-stroke: 1px rgba(255,255,255,0.1);
+            filter: drop-shadow(0 6px 30px rgba(255, 183, 77, 0.45));
             position: relative;
-            z-index: 2; /* V stays on top of the tag box */
+            z-index: 1; 
         }
 
-        /* Adjusted Pro Tag: Positioned lower and behind the logo text layer */
+        /* Adjusted Pro Tag: Raised and set ABOVE the logo */
         .pro-tag { 
             position: absolute; 
-            top: -15px; /* Lowered from -30px */
-            left: -20px; 
+            top: -20px; /* Raised 5px from previous -15px */
+            left: -15px; 
             font-family: 'Arial', sans-serif;
-            font-size: 18px; 
+            font-size: 16px; 
             font-weight: 900;
             letter-spacing: 1px;
-            transform: rotate(-10deg); 
-            z-index: 1; /* Behind the H1 text */
-            padding: 4px 12px;
-            background: rgba(10, 5, 0, 0.9);
-            border-radius: 4px;
+            transform: rotate(-8deg); 
+            z-index: 10; /* Now definitively ABOVE the H1 */
+            padding: 5px 14px;
+            background: #000;
+            border-radius: 5px;
             border: 2px solid #ffb74d;
-            box-shadow: 0 0 15px rgba(255, 183, 77, 0.4);
+            box-shadow: 0 4px 15px rgba(255, 183, 77, 0.5);
         }
 
-        /* Inner text of pro-tag to ensure it pops */
         .pro-tag span {
             background-image: linear-gradient(180deg, #fff 0%, #ffb74d 100%);
             -webkit-background-clip: text;
@@ -81,65 +87,72 @@
         }
 
         input, select { 
-            width: 85%; 
-            max-width: 360px; 
-            padding: 14px; 
-            margin: 12px 0; 
-            border-radius: 10px; 
+            width: 90%; 
+            max-width: 380px; 
+            padding: 18px; 
+            margin: 10px 0; 
+            border-radius: 15px; 
             border: 2px solid var(--orange-mid); 
-            background: rgba(25, 15, 5, 0.8); 
+            background: rgba(20, 12, 5, 0.9); 
             color: #fff; 
             text-align: center; 
-            font-size: 16px; 
+            font-size: 18px; /* Prevents iOS auto-zoom on focus */
             outline: none; 
-            backdrop-filter: blur(10px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
         }
 
-        /* Improved Dropdown Specifics */
         select {
             cursor: pointer;
             appearance: none;
             -webkit-appearance: none;
-            /* Custom arrow icon */
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffb74d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffb74d' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: left 15px center;
-            padding-left: 45px;
-            font-weight: 600;
+            background-position: left 20px center;
+            padding-left: 50px;
             color: var(--orange-pop);
-        }
-
-        select option {
-            background: #1a0f05;
-            color: #fff;
         }
         
         input:focus, select:focus {
             border-color: #ffffff;
-            box-shadow: 0 0 20px rgba(255, 183, 77, 0.5);
-            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(255, 183, 77, 0.6);
+            transform: scale(1.02);
         }
 
         button { 
-            margin-top: 30px; 
-            padding: 16px 80px; 
-            border-radius: 50px; 
-            background: linear-gradient(to bottom, #ffd180, #ffab40); 
+            margin-top: 40px; 
+            padding: 20px 0;
+            width: 90%;
+            max-width: 300px;
+            border-radius: 60px; 
+            background: linear-gradient(to bottom, #ffd180, #ff8c00); 
             color: #1a0500; 
-            font-weight: 800; 
+            font-weight: 900; 
             letter-spacing: 2px;
-            border: 1px solid #ffe0b2; 
+            border: none;
             cursor: pointer; 
-            font-size: 18px; 
-            box-shadow: 0 8px 25px rgba(255, 171, 64, 0.4);
-            transition: 0.2s;
-            text-transform: uppercase;
+            font-size: 20px; 
+            box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4);
+            transition: 0.3s;
+            animation: pulse-glow 3s infinite;
         }
-        button:active { transform: scale(0.96); }
 
-        #blackout { position: fixed; inset: 0; background: #000; z-index: 99; display: none; touch-action: none; }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4); }
+            50% { box-shadow: 0 10px 50px rgba(255, 140, 0, 0.7); }
+            100% { box-shadow: 0 10px 30px rgba(255, 140, 0, 0.4); }
+        }
+
+        button:active { transform: scale(0.94); opacity: 0.9; }
+
+        #blackout { position: fixed; inset: 0; background: #000; z-index: 999; display: none; touch-action: none; }
+
+        /* Tablet/Desktop tweaks */
+        @media (min-width: 768px) {
+            h1 { font-size: 110px; }
+            input, select, button { width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -178,13 +191,18 @@ const vib = p => navigator.vibrate?.(p);
 let state = { listening: false, lastWords: [], fired: false };
 
 /* ================== DENSE PARTICLES ================== */
-const resize = () => { dom.canvas.width = innerWidth; dom.canvas.height = innerHeight; };
-window.onresize = resize; resize();
+const resize = () => { 
+    dom.canvas.width = window.innerWidth; 
+    dom.canvas.height = window.innerHeight; 
+};
+window.addEventListener('resize', resize);
+resize();
+
 class Particle {
     constructor() { this.reset(); }
     reset() { 
-        this.x = Math.random() * innerWidth; 
-        this.y = Math.random() * innerHeight; 
+        this.x = Math.random() * dom.canvas.width; 
+        this.y = Math.random() * dom.canvas.height; 
         this.r = Math.random() * 2.5; 
         this.v = Math.random() * 0.7 + 0.1; 
         this.o = Math.random() * 0.7; 
@@ -197,7 +215,11 @@ class Particle {
     }
 }
 const pts = Array.from({ length: 225 }, () => new Particle());
-(function anim() { ctx.clearRect(0, 0, innerWidth, innerHeight); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
+(function anim() { 
+    ctx.clearRect(0, 0, dom.canvas.width, dom.canvas.height); 
+    pts.forEach(p => p.draw()); 
+    requestAnimationFrame(anim); 
+})();
 
 /* ================== SPEECH RECOGNITION ================== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -236,14 +258,14 @@ if (SR) {
             }
         }
     };
-    rec.onerror = () => { if (state.listening) rec.start(); };
-    rec.onend = () => { if (state.listening) rec.start(); };
+    rec.onerror = () => { if (state.listening) try { rec.start(); } catch(e) {} };
+    rec.onend = () => { if (state.listening) try { rec.start(); } catch(e) {} };
 }
 
 function performReveal(target) {
     if (state.fired || !target) return;
     state.fired = true; state.listening = false;
-    if (rec) rec.stop();
+    if (rec) try { rec.stop(); } catch(e) {}
     vib([80, 50, 80]); 
     let url = `https://www.google.com/search?q=${encodeURIComponent(target)}`;
     if (dom.mode.value === "images") url += "&tbm=isch";
@@ -258,7 +280,7 @@ dom.startBtn.onclick = () => {
     dom.menu.style.display = "none"; 
     dom.blackout.style.display = "block";
     state.listening = true; 
-    rec?.start(); 
+    try { rec?.start(); } catch(e) {}
     vib(100);
     document.documentElement.requestFullscreen?.().catch(()=>{});
 };
