@@ -6,7 +6,6 @@
     <title>Verbix PRO</title>
     <style>
         :root { 
-            /* Lightened orange palette to match requested mode-text style */
             --orange-pop: #ffcc80; 
             --orange-mid: #ffb74d; 
             --orange-deep: #fb8c00;
@@ -47,72 +46,98 @@
             line-height: 1;
             letter-spacing: 1px; 
             text-transform: uppercase;
-            /* Lightened gradient for a more golden-orange feel */
             background: linear-gradient(180deg, #ffffff 0%, #ffe0b2 25%, #ffb74d 50%, #f57c00 100%);
             -webkit-background-clip: text; 
             -webkit-text-fill-color: transparent; 
             filter: drop-shadow(0 4px 25px rgba(255, 183, 77, 0.4));
+            position: relative;
+            z-index: 2; /* V stays on top of the tag box */
         }
 
+        /* Adjusted Pro Tag: Positioned lower and behind the logo text layer */
         .pro-tag { 
             position: absolute; 
-            top: -30px; 
-            left: -25px; 
+            top: -15px; /* Lowered from -30px */
+            left: -20px; 
             font-family: 'Arial', sans-serif;
-            font-size: 20px; 
+            font-size: 18px; 
             font-weight: 900;
             letter-spacing: 1px;
             transform: rotate(-10deg); 
-            z-index: 2;
-            padding: 4px 10px;
-            background: rgba(0,0,0,0.8);
-            border-radius: 6px;
+            z-index: 1; /* Behind the H1 text */
+            padding: 4px 12px;
+            background: rgba(10, 5, 0, 0.9);
+            border-radius: 4px;
+            border: 2px solid #ffb74d;
+            box-shadow: 0 0 15px rgba(255, 183, 77, 0.4);
+        }
+
+        /* Inner text of pro-tag to ensure it pops */
+        .pro-tag span {
             background-image: linear-gradient(180deg, #fff 0%, #ffb74d 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            border: 2px solid #ffb74d;
-            box-shadow: 0 0 10px rgba(255, 183, 77, 0.3);
+            display: block;
         }
 
         input, select { 
-            width: 80%; 
-            max-width: 350px; 
-            padding: 15px; 
-            margin: 10px; 
-            border-radius: 12px; 
+            width: 85%; 
+            max-width: 360px; 
+            padding: 14px; 
+            margin: 12px 0; 
+            border-radius: 10px; 
             border: 2px solid var(--orange-mid); 
-            background: rgba(30, 20, 10, 0.85); 
+            background: rgba(25, 15, 5, 0.8); 
             color: #fff; 
             text-align: center; 
             font-size: 16px; 
             outline: none; 
-            backdrop-filter: blur(8px);
-            transition: all 0.3s ease;
-            box-shadow: 0 0 15px rgba(255, 183, 77, 0.1);
-            appearance: none; -webkit-appearance: none;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Improved Dropdown Specifics */
+        select {
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            /* Custom arrow icon */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffb74d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: left 15px center;
+            padding-left: 45px;
+            font-weight: 600;
+            color: var(--orange-pop);
+        }
+
+        select option {
+            background: #1a0f05;
+            color: #fff;
         }
         
         input:focus, select:focus {
-            border-color: #fff;
-            box-shadow: 0 0 20px rgba(255, 183, 77, 0.4);
-            transform: scale(1.02);
+            border-color: #ffffff;
+            box-shadow: 0 0 20px rgba(255, 183, 77, 0.5);
+            transform: translateY(-2px);
         }
 
         button { 
-            margin-top: 35px; 
-            padding: 16px 70px; 
+            margin-top: 30px; 
+            padding: 16px 80px; 
             border-radius: 50px; 
             background: linear-gradient(to bottom, #ffd180, #ffab40); 
             color: #1a0500; 
             font-weight: 800; 
-            letter-spacing: 1.5px;
+            letter-spacing: 2px;
             border: 1px solid #ffe0b2; 
             cursor: pointer; 
-            font-size: 19px; 
-            box-shadow: 0 0 25px rgba(255, 171, 64, 0.5);
-            transition: transform 0.1s;
+            font-size: 18px; 
+            box-shadow: 0 8px 25px rgba(255, 171, 64, 0.4);
+            transition: 0.2s;
+            text-transform: uppercase;
         }
-        button:active { transform: scale(0.95); }
+        button:active { transform: scale(0.96); }
 
         #blackout { position: fixed; inset: 0; background: #000; z-index: 99; display: none; touch-action: none; }
     </style>
@@ -123,20 +148,20 @@
 
 <div id="menu">
     <div class="logo-wrap">
-        <div class="pro-tag">PRO</div>
+        <div class="pro-tag"><span>PRO</span></div>
         <h1>VERBIX</h1>
     </div>
     
-    <input id="startWord" placeholder="Start Triggers (e.g. המילה היא)">
-    <input id="endWord" placeholder="End Triggers (e.g. בחירה חופשית)">
+    <input id="startWord" placeholder="מילות פתיחה (לדוגמה: המילה היא)">
+    <input id="endWord" placeholder="מילות סיום (לדוגמה: נכון מאוד)">
     
     <select id="modeSelect">
-        <option value="web">Google Search</option>
-        <option value="images">Image Reveal</option>
-        <option value="maps">Google Maps</option>
+        <option value="web">חיפוש בגוגל (Web)</option>
+        <option value="images">חיפוש תמונות (Images)</option>
+        <option value="maps">גוגל מפות (Maps)</option>
     </select>
 
-    <button id="startBtn">ACTIVATE</button>
+    <button id="startBtn">הפעל מצב PRO</button>
 </div>
 
 <div id="blackout"></div>
@@ -150,13 +175,9 @@ const dom = {
 const ctx = dom.canvas.getContext("2d");
 const vib = p => navigator.vibrate?.(p);
 
-let state = { 
-    listening: false, 
-    lastWords: [],
-    fired: false
-};
+let state = { listening: false, lastWords: [], fired: false };
 
-/* ================== DENSE AMBIENT PARTICLES (5x More) ================== */
+/* ================== DENSE PARTICLES ================== */
 const resize = () => { dom.canvas.width = innerWidth; dom.canvas.height = innerHeight; };
 window.onresize = resize; resize();
 class Particle {
@@ -164,23 +185,21 @@ class Particle {
     reset() { 
         this.x = Math.random() * innerWidth; 
         this.y = Math.random() * innerHeight; 
-        this.r = Math.random() * 2.5; // Slightly varied sizes
-        this.v = Math.random() * 0.7 + 0.1; // More varied speeds
+        this.r = Math.random() * 2.5; 
+        this.v = Math.random() * 0.7 + 0.1; 
         this.o = Math.random() * 0.7; 
     }
     draw() { 
-        this.y -= this.v; 
-        this.o -= 0.003; 
+        this.y -= this.v; this.o -= 0.003; 
         if (this.y < 0 || this.o <= 0) this.reset(); 
         ctx.fillStyle = `rgba(255, 204, 128, ${this.o})`; 
         ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.fill(); 
     }
 }
-// Increased length to 225 for 5x density
 const pts = Array.from({ length: 225 }, () => new Particle());
 (function anim() { ctx.clearRect(0, 0, innerWidth, innerHeight); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
 
-/* ================== REFINED SPEECH LOGIC ================== */
+/* ================== SPEECH RECOGNITION ================== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec;
 
@@ -192,12 +211,8 @@ if (SR) {
 
     rec.onresult = e => {
         if (state.fired) return;
-
         let transcript = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-            transcript += e.results[i][0].transcript;
-        }
-
+        for (let i = e.resultIndex; i < e.results.length; i++) transcript += e.results[i][0].transcript;
         const cleanText = transcript.toLowerCase().replace(/[.,!?״"']/g, "").trim();
         const words = cleanText.split(/\s+/).filter(Boolean);
         state.lastWords = words;
@@ -208,12 +223,10 @@ if (SR) {
         for (let phrase of starts) {
             if (cleanText.includes(phrase)) {
                 const parts = cleanText.split(phrase);
-                const after = parts[parts.length - 1].trim().split(/\s+/);
-                const target = after[0];
+                const target = parts[parts.length - 1].trim().split(/\s+/)[0];
                 if (target && target.length > 2) return performReveal(target);
             }
         }
-
         for (let phrase of ends) {
             if (cleanText.includes(phrase)) {
                 const parts = cleanText.split(phrase);
@@ -223,33 +236,18 @@ if (SR) {
             }
         }
     };
-
     rec.onerror = () => { if (state.listening) rec.start(); };
     rec.onend = () => { if (state.listening) rec.start(); };
 }
 
-/* ================== ACTION ================== */
-dom.blackout.onclick = () => {
-    if (state.fired || !state.lastWords.length) return vib(40);
-    const target = state.lastWords[state.lastWords.length - 1];
-    if (target && target.length > 2) performReveal(target);
-};
-
-let sY = 0;
-dom.blackout.ontouchstart = e => sY = e.touches[0].clientY;
-dom.blackout.ontouchend = e => { if (sY - e.changedTouches[0].clientY > 100) location.reload(); };
-
 function performReveal(target) {
     if (state.fired || !target) return;
-    state.fired = true;
-    state.listening = false;
+    state.fired = true; state.listening = false;
     if (rec) rec.stop();
     vib([80, 50, 80]); 
-
     let url = `https://www.google.com/search?q=${encodeURIComponent(target)}`;
     if (dom.mode.value === "images") url += "&tbm=isch";
     if (dom.mode.value === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(target)}`;
-    
     location.replace(url);
 }
 
