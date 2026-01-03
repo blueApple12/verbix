@@ -45,8 +45,8 @@
 
 <div id="menu">
     <div class="logo-wrap"><span class="pro-tag">PRO</span><h1>VERBIX</h1></div>
-    <input id="startWord" placeholder="Trigger Start (e.g. המילה)">
-    <input id="endWord" placeholder="Trigger End (e.g. נכון)">
+    <input id="startWord" placeholder="Start Triggers (e.g. המילה היא)">
+    <input id="endWord" placeholder="End Triggers (e.g. בחירה חופשית)">
     
     <select id="modeSelect">
         <option value="web">Google Search</option>
@@ -70,9 +70,8 @@ const vib = p => navigator.vibrate?.(p);
 
 let state = { 
     listening: false, 
-    lastHeard: [],
-    tapCount: 0, 
-    tapTimer: null
+    lastWords: [],
+    fired: false
 };
 
 /* ================== BACKGROUND ANIMATION ================== */
@@ -86,7 +85,7 @@ class Particle {
 const pts = Array.from({ length: 50 }, () => new Particle());
 (function anim() { ctx.clearRect(0, 0, innerWidth, innerHeight); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
 
-/* ================== FAST SPEECH LOGIC ================== */
+/* ================== NASA-LEVEL NOISE RECOGNITION ================== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec;
 
@@ -94,62 +93,74 @@ if (SR) {
     rec = new SR();
     rec.lang = "he-IL"; 
     rec.continuous = true; 
-    rec.interimResults = true; // CRITICAL for speed
+    rec.interimResults = true;
 
     rec.onresult = e => {
-        // We take the latest part of the transcript for instant processing
-        const result = e.results[e.results.length - 1];
-        const text = result[0].transcript.toLowerCase().trim().replace(/[.,!?״"']/g, "");
-        const words = text.split(/\s+/).filter(Boolean);
-        
-        state.lastHeard = words; // Backup for manual tap
+        if (state.fired) return;
+
+        // Collect all results to maintain context in loud rooms
+        let transcript = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            transcript += e.results[i][0].transcript;
+        }
+
+        const cleanText = transcript.toLowerCase().trim().replace(/[.,!?״"']/g, "");
+        const words = cleanText.split(/\s+/).filter(Boolean);
+        state.lastWords = words;
 
         const starts = dom.startWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
         const ends = dom.endWord.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 
-        // Instant Start Trigger Check
-        for (let t of starts) {
-            let idx = words.lastIndexOf(t);
-            if (idx !== -1 && idx < words.length - 1) {
-                return performReveal(words[idx + 1]);
+        // ADVANCED PHRASE SEARCH (Sliding Window)
+        // Check Start Phrases: "Phrase [Word]"
+        for (let phrase of starts) {
+            if (cleanText.includes(phrase)) {
+                const parts = cleanText.split(phrase);
+                const after = parts[parts.length - 1].trim().split(/\s+/);
+                if (after[0]) return performReveal(after[0]);
             }
         }
 
-        // Instant End Trigger Check
-        for (let t of ends) {
-            let idx = words.lastIndexOf(t);
-            if (idx > 0) {
-                return performReveal(words[idx - 1]);
+        // Check End Phrases: "[Word] Phrase"
+        for (let phrase of ends) {
+            if (cleanText.includes(phrase)) {
+                const parts = cleanText.split(phrase);
+                // Grab the text before the last occurrence of the trigger
+                const before = parts[parts.length - 2]?.trim().split(/\s+/);
+                if (before && before.length > 0) return performReveal(before[before.length - 1]);
             }
         }
     };
-    rec.onend = () => state.listening && rec.start();
+
+    // Auto-restart even if noise causes an error
+    rec.onerror = () => { if (state.listening) rec.start(); };
+    rec.onend = () => { if (state.listening) rec.start(); };
 }
 
-/* ================== GESTURES & REVEAL ================== */
+/* ================== GESTURES & FAST REDIRECT ================== */
 dom.blackout.onclick = () => {
-    if (!state.lastHeard.length) return vib(40);
-    // Manual tap takes the very last word heard instantly
-    performReveal(state.lastHeard[state.lastHeard.length - 1]);
+    if (state.fired || !state.lastWords.length) return vib(40);
+    performReveal(state.lastWords[state.lastWords.length - 1]);
 };
 
-// Swipe up to Reset
+// Reset Gesture
 let sY = 0;
 dom.blackout.ontouchstart = e => sY = e.touches[0].clientY;
 dom.blackout.ontouchend = e => { if (sY - e.changedTouches[0].clientY > 100) location.reload(); };
 
-function performReveal(targetWord) {
-    if (!state.listening || !targetWord) return;
+function performReveal(target) {
+    if (state.fired || !target) return;
+    state.fired = true;
+    state.listening = false;
     
-    state.listening = false; // Kill listener immediately
     if (rec) rec.stop();
-    vib([60, 100, 60]);
+    vib([80, 50, 80]); // "Locked In" vibration
 
-    let url = `https://www.google.com/search?q=${encodeURIComponent(targetWord)}`;
+    let url = `https://www.google.com/search?q=${encodeURIComponent(target)}`;
     if (dom.mode.value === "images") url += "&tbm=isch";
-    if (dom.mode.value === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(targetWord)}`;
+    if (dom.mode.value === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(target)}`;
     
-    // location.replace is faster and deletes history so they can't click "back"
+    // Mega fast replacement - zero history trace
     location.replace(url);
 }
 
@@ -158,8 +169,12 @@ dom.startBtn.onclick = () => {
     localStorage.v_s = dom.startWord.value;
     localStorage.v_e = dom.endWord.value;
     localStorage.v_m = dom.mode.value;
-    dom.menu.style.display = "none"; dom.blackout.style.display = "block";
-    state.listening = true; rec?.start(); vib(100);
+    
+    dom.menu.style.display = "none"; 
+    dom.blackout.style.display = "block";
+    state.listening = true; 
+    rec?.start(); 
+    vib(100);
     document.documentElement.requestFullscreen?.().catch(()=>{});
 };
 
