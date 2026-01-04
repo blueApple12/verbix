@@ -97,8 +97,8 @@
     </div>
     
     <div class="input-group">
-        <input id="sw" placeholder="Start Triggers (למשל: המילה)">
-        <input id="ew" placeholder="End Triggers (למשל: נכון)">
+        <input id="sw" placeholder="Start Trigger">
+        <input id="ew" placeholder="End Trigger">
         
         <div class="stepper">
             <button class="step-btn" onclick="updateStep(-1)">−</button>
@@ -110,11 +110,11 @@
         </div>
 
         <div class="custom-select">
-            <div class="select-label" id="selTxt">Google Web</div>
+            <div class="select-label" id="selTxt">Google Reveal</div>
             <select id="md" onchange="document.getElementById('selTxt').innerText = this.options[this.selectedIndex].text">
                 <option value="web">Google Web</option>
                 <option value="images">Image Reveal</option>
-                <option value="maps">Google Maps</option>
+                <option value="maps">Maps Reveal</option>
             </select>
         </div>
     </div>
