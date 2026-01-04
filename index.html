@@ -6,7 +6,6 @@
     <title>Verbix PRO</title>
     <style>
         :root { 
-            /* Restored your preferred range */
             --gold-main: #d89330;  
             --gold-bright: #ffcc66;  
             --gold-deep: #5e3a00; 
@@ -27,76 +26,62 @@
             align-items: center; justify-content: center; height: 100vh; padding: 20px; box-sizing: border-box;
         }
         
-        .logo-wrap { position: relative; margin-bottom: 40px; display: inline-block; }
+        .logo-wrap { position: relative; margin-bottom: 30px; display: inline-block; }
 
-        /* MAIN LOGO - Restored #d89330 range */
         h1 { 
             font-family: 'Arial Black', 'Impact', sans-serif;
-            font-size: clamp(70px, 20vw, 95px); 
+            font-size: clamp(60px, 18vw, 95px); 
             margin: 0; line-height: 1; letter-spacing: 1px; text-transform: uppercase;
-            position: relative;
-            z-index: 5; /* Above the PRO tag */
-            background: linear-gradient(180deg, 
-                #ffffff 0%,       
-                var(--gold-bright) 35%,      
-                var(--gold-main) 60%,      
-                var(--gold-deep) 100%      
-            );
+            position: relative; z-index: 5;
+            background: linear-gradient(180deg, #ffffff 0%, var(--gold-bright) 35%, var(--gold-main) 60%, var(--gold-deep) 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
             filter: drop-shadow(0 4px 25px rgba(216, 147, 48, 0.4));
         }
 
-        /* PRO TAG - Layered behind */
         .pro-tag { 
-            position: absolute; 
-            top: -22px; 
-            left: -15px; 
-            font-size: 20px; 
-            font-weight: 900; 
-            transform: rotate(-10deg); 
-            z-index: 2; /* Layered behind H1 */
-            padding: 4px 12px; 
-            background: rgba(0,0,0,0.9); 
-            border-radius: 6px;
-            border: 2px solid var(--gold-main);
+            position: absolute; top: -22px; left: -15px; font-size: 20px; font-weight: 900; 
+            transform: rotate(-10deg); z-index: 2; padding: 4px 12px; 
+            background: rgba(0,0,0,0.9); border-radius: 6px; border: 2px solid var(--gold-main);
             background-image: linear-gradient(180deg, #fff 0%, var(--gold-main) 100%);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             box-shadow: 0 0 10px rgba(216, 147, 48, 0.3);
         }
 
-        .input-group { width: 90%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; }
+        .input-group { width: 90%; max-width: 380px; display: flex; flex-direction: column; gap: 10px; }
 
-        input { 
-            width: 100%; padding: 15px; border-radius: 12px; border: 2px solid var(--gold-deep); 
+        input, .stepper { 
+            width: 100%; padding: 14px; border-radius: 12px; border: 2px solid var(--gold-deep); 
             background: rgba(20, 10, 5, 0.85); color: #fff; text-align: center; font-size: 16px; 
             backdrop-filter: blur(8px); box-sizing: border-box; transition: 0.3s ease;
         }
-        input:focus { border-color: var(--gold-main); box-shadow: 0 0 20px rgba(216, 147, 48, 0.2); transform: scale(1.02); outline: none; }
 
-        /* Custom Dropdown for Mobile */
+        input:focus { border-color: var(--gold-main); outline: none; box-shadow: 0 0 15px rgba(216, 147, 48, 0.2); }
+
+        /* Custom Word Counter / Stepper */
+        .stepper { display: flex; justify-content: space-between; align-items: center; padding: 5px 15px; }
+        .step-btn { 
+            background: none; border: none; color: var(--gold-bright); 
+            font-size: 24px; font-weight: bold; cursor: pointer; width: 40px; 
+        }
+        .step-label { font-size: 14px; color: var(--gold-main); text-transform: uppercase; letter-spacing: 1px; }
+        #wordCountDisplay { font-weight: bold; font-size: 20px; color: #fff; width: 30px; text-align: center;}
+
         .custom-select {
-            position: relative; width: 100%; height: 55px;
+            position: relative; width: 100%; height: 50px;
             background: rgba(20, 10, 5, 0.85); border-radius: 12px;
             border: 2px solid var(--gold-deep); overflow: hidden;
             display: flex; align-items: center; justify-content: center;
         }
-        .custom-select select {
-            width: 100%; height: 100%; opacity: 0; position: absolute; z-index: 2; cursor: pointer;
-        }
-        .select-label {
-            color: var(--gold-bright); font-weight: bold; font-size: 16px; pointer-events: none;
-            display: flex; align-items: center; gap: 10px;
-        }
-        .select-label::after { content: '▼'; font-size: 10px; }
+        .custom-select select { width: 100%; height: 100%; opacity: 0; position: absolute; z-index: 2; cursor: pointer; }
+        .select-label { color: var(--gold-bright); font-weight: bold; font-size: 16px; pointer-events: none; }
 
-        button { 
-            margin-top: 35px; width: 90%; max-width: 380px; padding: 16px; border-radius: 50px; 
+        button#bt { 
+            margin-top: 25px; width: 90%; max-width: 380px; padding: 18px; border-radius: 50px; 
             font-size: 20px; font-weight: 800; letter-spacing: 1.5px;
             background: linear-gradient(to bottom, var(--gold-bright), var(--gold-main)); 
             color: #1a0500; border: 1px solid #fff; cursor: pointer;
-            box-shadow: 0 0 25px rgba(216, 147, 48, 0.5); transition: 0.1s;
+            box-shadow: 0 0 25px rgba(216, 147, 48, 0.5);
         }
-        button:active { transform: scale(0.95); }
 
         #blackout { position: fixed; inset: 0; background: #000; z-index: 999; display: none; touch-action: none; }
     </style>
@@ -112,9 +97,18 @@
     </div>
     
     <div class="input-group">
-        <input id="sw" placeholder="Start Trigger">
-        <input id="ew" placeholder="End Trigger">
+        <input id="sw" placeholder="Start Triggers (למשל: המילה)">
+        <input id="ew" placeholder="End Triggers (למשל: נכון)">
         
+        <div class="stepper">
+            <button class="step-btn" onclick="updateStep(-1)">−</button>
+            <div style="text-align: center;">
+                <div class="step-label">Words To Reveal</div>
+                <span id="wordCountDisplay">1</span>
+            </div>
+            <button class="step-btn" onclick="updateStep(1)">+</button>
+        </div>
+
         <div class="custom-select">
             <div class="select-label" id="selTxt">Google Web</div>
             <select id="md" onchange="document.getElementById('selTxt').innerText = this.options[this.selectedIndex].text">
@@ -135,7 +129,13 @@ const $ = id => document.getElementById(id);
 const d = { c: $("canvas"), m: $("menu"), bl: $("blackout"), bt: $("bt"), s: $("sw"), e: $("ew"), md: $("md") };
 const ctx = d.c.getContext("2d");
 
-let st = { listening: false, words: [], fired: false };
+let st = { listening: false, words: [], fired: false, revealCount: 1 };
+
+function updateStep(val) {
+    st.revealCount = Math.max(1, Math.min(10, st.revealCount + val));
+    $("wordCountDisplay").innerText = st.revealCount;
+    navigator.vibrate?.(10);
+}
 
 // 1000 Particles
 const res = () => { d.c.width = innerWidth; d.c.height = innerHeight; };
@@ -143,25 +143,17 @@ window.onresize = res; res();
 class P { 
     constructor() { this.reset(); } 
     reset() { 
-        this.x = Math.random() * innerWidth; 
-        this.y = Math.random() * innerHeight; 
-        this.r = Math.random() * 2; 
-        this.v = Math.random() * 0.5 + 0.2; 
-        this.o = Math.random() * 0.6; 
+        this.x = Math.random() * innerWidth; this.y = Math.random() * innerHeight; 
+        this.r = Math.random() * 2; this.v = Math.random() * 0.5 + 0.2; this.o = Math.random() * 0.6; 
     } 
     draw() { 
-        this.y -= this.v; this.o -= 0.005; 
-        if (this.y < 0 || this.o <= 0) this.reset(); 
+        this.y -= this.v; this.o -= 0.005; if (this.y < 0 || this.o <= 0) this.reset(); 
         ctx.fillStyle = `rgba(216, 147, 48, ${this.o})`;
         ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, 7); ctx.fill(); 
     } 
 }
 const pts = Array.from({length: 1000}, () => new P());
-(function anim() { 
-    ctx.clearRect(0,0,innerWidth,innerHeight); 
-    pts.forEach(p => p.draw()); 
-    requestAnimationFrame(anim); 
-})();
+(function anim() { ctx.clearRect(0,0,innerWidth,innerHeight); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
 
 // STT Logic
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -174,22 +166,28 @@ if (SR) {
         for (let i = e.resultIndex; i < e.results.length; i++) tr += e.results[i][0].transcript;
         const txt = tr.toLowerCase().trim().replace(/[.,!?״"']/g, "");
         if (!txt) return;
-        st.words = txt.split(/\s+/).filter(Boolean);
+        const wordsArr = txt.split(/\s+/).filter(Boolean);
+        st.words = wordsArr;
 
         const sL = d.s.value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
         const eL = d.e.value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
 
         for (let ph of sL) {
             if (txt.includes(ph)) {
-                const target = txt.split(ph).pop().trim().split(/\s+/)[0];
+                const parts = txt.split(ph);
+                const afterWords = parts[parts.length - 1].trim().split(/\s+/);
+                const target = afterWords.slice(0, st.revealCount).join(" ");
                 if (target) return reveal(target);
             }
         }
         for (let ph of eL) {
             if (txt.includes(ph)) {
                 const parts = txt.split(ph);
-                const before = parts[parts.length - 2]?.trim().split(/\s+/);
-                if (before?.length) return reveal(before.pop());
+                const beforeWords = parts[parts.length - 2]?.trim().split(/\s+/);
+                if (beforeWords?.length) {
+                    const target = beforeWords.slice(-st.revealCount).join(" ");
+                    return reveal(target);
+                }
             }
         }
     };
@@ -208,15 +206,17 @@ function reveal(t) {
     location.replace(url);
 }
 
-d.bl.onclick = () => { if (!st.fired && st.words.length) reveal(st.words[st.words.length - 1]); };
+d.bl.onclick = () => { if (!st.fired && st.words.length) reveal(st.words.slice(-st.revealCount).join(" ")); };
 d.bt.onclick = () => {
-    localStorage.v_s = d.s.value; localStorage.v_e = d.e.value; localStorage.v_m = d.md.value;
+    localStorage.v_s = d.s.value; localStorage.v_e = d.e.value; localStorage.v_m = d.md.value; localStorage.v_rc = st.revealCount;
     d.m.style.display = "none"; d.bl.style.display = "block";
     st.listening = true; try { rec.start(); } catch(e) {}
     document.documentElement.requestFullscreen?.().catch(()=>{});
 };
 
 d.s.value = localStorage.v_s || ""; d.e.value = localStorage.v_e || ""; d.md.value = localStorage.v_m || "web";
+st.revealCount = parseInt(localStorage.v_rc) || 1;
+$("wordCountDisplay").innerText = st.revealCount;
 $("selTxt").innerText = d.md.options[d.md.selectedIndex].text;
 </script>
 </body>
