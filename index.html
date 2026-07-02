@@ -84,6 +84,12 @@
         }
 
         #blackout { position: fixed; inset: 0; background: #000; z-index: 999; display: none; touch-action: none; }
+        /* Invisible dictation field: focusable so native keyboard opens; text hidden behind blackout */
+        #dict {
+            position: fixed; inset: 0; z-index: 998; border: none; outline: none;
+            background: transparent; color: transparent; caret-color: transparent;
+            font-size: 16px; /* >=16px stops iOS auto-zoom */ padding: 0;
+        }
     </style>
 </head>
 <body>
@@ -123,10 +129,12 @@
 </div>
 
 <div id="blackout"></div>
+<input id="dict" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-hidden="true">
+
 
 <script>
 const $ = id => document.getElementById(id);
-const d = { c: $("canvas"), m: $("menu"), bl: $("blackout"), bt: $("bt"), s: $("sw"), e: $("ew"), md: $("md") };
+const d = { c: $("canvas"), m: $("menu"), bl: $("blackout"), bt: $("bt"), s: $("sw"), e: $("ew"), md: $("md"), dc: $("dict") };
 const ctx = d.c.getContext("2d");
 
 let st = { listening: false, words: [], fired: false, revealCount: 1 };
@@ -155,51 +163,42 @@ class P {
 const pts = Array.from({length: 1000}, () => new P());
 (function anim() { ctx.clearRect(0,0,innerWidth,innerHeight); pts.forEach(p => p.draw()); requestAnimationFrame(anim); })();
 
-// STT Logic
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec;
-if (SR) {
-    rec = new SR(); rec.lang = "he-IL"; rec.continuous = true; rec.interimResults = true;
-    rec.onresult = e => {
-        if (st.fired) return;
-        let tr = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) tr += e.results[i][0].transcript;
-        const txt = tr.toLowerCase().trim().replace(/[.,!?״"']/g, "");
-        if (!txt) return;
-        const wordsArr = txt.split(/\s+/).filter(Boolean);
-        st.words = wordsArr;
+// Input Logic — native keyboard dictation typed into the invisible #dict field
+function process(raw) {
+    if (st.fired) return;
+    const txt = (raw || "").toLowerCase().trim().replace(/[.,!?״"']/g, "");
+    if (!txt) return;
+    st.words = txt.split(/\s+/).filter(Boolean);
 
-        const sL = d.s.value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
-        const eL = d.e.value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+    const sL = d.s.value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+    const eL = d.e.value.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
 
-        for (let ph of sL) {
-            if (txt.includes(ph)) {
-                const parts = txt.split(ph);
-                const afterWords = parts[parts.length - 1].trim().split(/\s+/);
-                const target = afterWords.slice(0, st.revealCount).join(" ");
-                if (target) return reveal(target);
+    for (let ph of sL) {
+        if (txt.includes(ph)) {
+            const parts = txt.split(ph);
+            const afterWords = parts[parts.length - 1].trim().split(/\s+/);
+            const target = afterWords.slice(0, st.revealCount).join(" ");
+            if (target) return reveal(target);
+        }
+    }
+    for (let ph of eL) {
+        if (txt.includes(ph)) {
+            const parts = txt.split(ph);
+            const beforeWords = parts[parts.length - 2]?.trim().split(/\s+/);
+            if (beforeWords?.length) {
+                const target = beforeWords.slice(-st.revealCount).join(" ");
+                return reveal(target);
             }
         }
-        for (let ph of eL) {
-            if (txt.includes(ph)) {
-                const parts = txt.split(ph);
-                const beforeWords = parts[parts.length - 2]?.trim().split(/\s+/);
-                if (beforeWords?.length) {
-                    const target = beforeWords.slice(-st.revealCount).join(" ");
-                    return reveal(target);
-                }
-            }
-        }
-    };
-    const restart = () => { if (st.listening && !st.fired) try { rec.start(); } catch(e) {} };
-    rec.onerror = restart; rec.onend = restart;
+    }
 }
+d.dc.addEventListener("input", e => process(e.target.value));
 
 function reveal(t) {
     if (st.fired || !t) return;
     st.fired = true; st.listening = false;
-    if (rec) rec.stop();
-    navigator.vibrate?.([80, 50, 80]); 
+    d.dc.blur();
+    navigator.vibrate?.([80, 50, 80]);
     let url = `https://www.google.com/search?q=${encodeURIComponent(t)}`;
     if (d.md.value === "images") url += "&tbm=isch";
     if (d.md.value === "maps") url = `https://www.google.com/maps/search/${encodeURIComponent(t)}`;
@@ -210,8 +209,10 @@ d.bl.onclick = () => { if (!st.fired && st.words.length) reveal(st.words.slice(-
 d.bt.onclick = () => {
     localStorage.v_s = d.s.value; localStorage.v_e = d.e.value; localStorage.v_m = d.md.value; localStorage.v_rc = st.revealCount;
     d.m.style.display = "none"; d.bl.style.display = "block";
-    st.listening = true; try { rec.start(); } catch(e) {}
+    st.listening = true;
     document.documentElement.requestFullscreen?.().catch(()=>{});
+    // Focus last, inside this tap gesture, so the native keyboard opens. Performer taps its mic key.
+    d.dc.value = ""; d.dc.focus();
 };
 
 d.s.value = localStorage.v_s || ""; d.e.value = localStorage.v_e || ""; d.md.value = localStorage.v_m || "web";
